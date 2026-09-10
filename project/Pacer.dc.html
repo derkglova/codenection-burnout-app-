@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif;font-feature-settings:"calt","kern","liga","ss03";}
+a{color:#0066cc;text-decoration:none;}
+a:hover{color:#0071e3;}
+.pacer-range{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:#e0e0e0;border-radius:9999px;outline:none;}
+.pacer-range::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#0066cc;cursor:pointer;}
+.pacer-range::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#0066cc;cursor:pointer;border:none;}
+.pacer-cmd-input::placeholder{color:#8e8e93;}
+.pacer-scroll::-webkit-scrollbar{width:10px;}
+.pacer-scroll::-webkit-scrollbar-thumb{background:#dadce0;border-radius:9999px;border:3px solid #ffffff;}
+@keyframes pacerPulse{0%,100%{opacity:1;}50%{opacity:0.25;}}
+@keyframes pacerRise{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.pacer-pulse-dot{animation:pacerPulse 1s ease-in-out infinite;}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#ffffff;color:#1d1d1f;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif;display:flex;flex-direction:column;">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:#ffffff;border-bottom:1px solid #e0e0e0;">
+    <div style="display:flex;align-items:center;gap:20px;flex:1;min-width:0;">
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',Inter,system-ui,sans-serif;font-size:19px;font-weight:600;letter-spacing:-0.28px;color:#1d1d1f;flex-shrink:0;">Pacer</div>
+      <div style="font-size:13px;color:#7a7a7a;flex-shrink:0;">{{ dateRangeLabel }}</div>
+      <div style="display:flex;align-items:center;gap:10px;background:#f5f5f7;border:1px solid #e0e0e0;border-radius:9999px;padding:7px 16px 7px 14px;flex:1;max-width:520px;">
+        <span style="font-size:13px;color:#7a7a7a;flex-shrink:0;">Today</span>
+        <div title="{{ todayBreakdownLabel }}" style="flex:1;min-width:40px;height:8px;background:#e5e5ea;border-radius:9999px;overflow:hidden;position:relative;display:flex;align-items:stretch;">
+          <div style="height:100%;width:{{ todayUsedPctClamped }}%;background:{{ todayStatusColor }};flex-shrink:0;position:relative;z-index:2;"></div>
+          <div style="height:100%;width:{{ todayFuturePctClamped }}%;background:{{ todayFutureBg }};opacity:0.5;filter:blur(0.4px);border-left:{{ todayFutureBorder }};flex-shrink:0;position:relative;z-index:1;"></div>
+        </div>
+        <span style="font-size:13px;font-weight:600;color:{{ todayStatusColor }};flex-shrink:0;">{{ todayCapPercent }}%</span>
+      </div>
+    </div>
+    <button onClick="{{ openCommand }}" style="display:flex;align-items:center;background:#0066cc;color:#ffffff;border:none;border-radius:9999px;padding:10px 18px;font-size:14px;font-weight:400;letter-spacing:-0.224px;cursor:pointer;flex-shrink:0;" style-hover="background:#0071e3;" style-active="transform:scale(0.96);">
+      <span class="pacer-pulse-dot" style="width:6px;height:6px;border-radius:50%;background:#ffffff;display:inline-block;margin-right:8px;"></span>Ask Pacer<span style="margin-left:8px;opacity:0.6;font-size:12px;">⌘K</span>
+    </button>
+  </div>
+
+  <sc-if value="{{ nudge }}" hint-placeholder-val="{{ false }}">
+    <div style="margin:16px 32px 0;padding:16px 20px;background:rgba(255,59,48,0.06);border:1px solid rgba(255,59,48,0.25);border-radius:14px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:#1d1d1f;">Tomorrow is overloaded ({{ capPercent }}%)</div>
+        <div style="font-size:13px;color:#333333;margin-top:3px;">"{{ nudgeEventTitle }}" is pushing you past capacity. Move it to {{ nudgeDayLabel }}, which has room.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;align-items:center;">
+        <button onClick="{{ dismissNudge }}" style="background:transparent;border:none;color:#7a7a7a;font-size:13px;padding:9px 12px;cursor:pointer;">Dismiss</button>
+        <button onClick="{{ applyNudgeMove }}" style="background:#0066cc;color:#ffffff;border:none;border-radius:9999px;padding:9px 16px;font-size:13px;cursor:pointer;" style-hover="background:#0071e3;">Move it to {{ nudgeDayLabel }}</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="display:flex;gap:24px;padding:24px 32px 32px;flex-wrap:wrap;align-items:flex-start;">
+
+    <div style="flex:3 1 620px;background:#ffffff;border:1px solid #e0e0e0;border-radius:18px;overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <div style="min-width:960px;">
+          <div style="display:grid;grid-template-columns:56px repeat(7, minmax(132px,1fr));border-bottom:1px solid #e0e0e0;">
+            <div></div>
+            <sc-for list="{{ days }}" as="day" hint-placeholder-count="7">
+              <div style="{{ day.headerStyle }}">
+                <button onClick="{{ day.onAdd }}" style="position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:5px;border:1px solid #e0e0e0;background:transparent;color:#7a7a7a;font-size:12px;line-height:1;cursor:pointer;opacity:0.4;" style-hover="opacity:1;border-color:#0066cc;color:#0066cc;">+</button>
+                <div style="font-size:11px;font-weight:500;color:#70757a;letter-spacing:0.6px;">{{ day.abbr }}</div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:5px;">
+                  <sc-if value="{{ day.isToday }}" hint-placeholder-val="{{ false }}">
+                    <span style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#0066cc;color:#ffffff;font-size:16px;font-weight:600;flex-shrink:0;">{{ day.dateNum }}</span>
+                  </sc-if>
+                  <sc-if value="{{ day.isNotToday }}" hint-placeholder-val="{{ true }}">
+                    <span style="font-size:16px;font-weight:400;color:#3c4043;">{{ day.dateNum }}</span>
+                  </sc-if>
+                  <sc-if value="{{ day.isTomorrow }}" hint-placeholder-val="{{ false }}">
+                    <span style="background:rgba(0,102,204,0.09);color:#0066cc;font-size:11px;font-weight:600;padding:2px 8px;border-radius:9999px;">Tomorrow</span>
+                  </sc-if>
+                </div>
+                <div title="{{ day.capLabel }}" style="margin:8px 14px 0;height:4px;background:#eceff1;border-radius:9999px;overflow:hidden;">
+                  <div style="height:100%;width:{{ day.capPctClamped }}%;background:{{ day.capColor }};border-radius:9999px;"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div class="pacer-scroll" ref="{{ scrollRef }}" style="max-height:600px;overflow-y:auto;">
+            <div ref="{{ gridRef }}" style="display:grid;grid-template-columns:56px repeat(7, minmax(132px,1fr));">
+              <div style="position:relative;height:{{ gridHeight }}px;">
+                <sc-for list="{{ hourLabels }}" as="hl" hint-placeholder-count="16">
+                  <div style="height:60px;font-size:11px;color:#7a7a7a;text-align:right;padding-right:8px;box-sizing:border-box;transform:translateY(-6px);">{{ hl.label }}</div>
+                </sc-for>
+              </div>
+              <sc-for list="{{ days }}" as="day" hint-placeholder-count="7">
+                <div style="{{ day.bodyStyle }}" onMouseDown="{{ day.onGridMouseDown }}">
+                  <sc-for list="{{ day.events }}" as="ev" hint-placeholder-count="2">
+                    <div style="{{ ev.style }}" onMouseDown="{{ ev.onMouseDown }}">
+                      <div style="{{ ev.titleStyle }}">{{ ev.title }}</div>
+                      <sc-if value="{{ ev.showTime }}" hint-placeholder-val="{{ true }}">
+                        <div style="font-size:10.5px;color:rgba(255,255,255,0.85);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ ev.timeLabel }}</div>
+                      </sc-if>
+                      <div onMouseDown="{{ ev.onResizeMouseDown }}" style="position:absolute;left:0;right:0;bottom:0;height:7px;cursor:ns-resize;"></div>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ day.ghost }}" hint-placeholder-val="{{ false }}">
+                    <div style="{{ day.ghost.style }}">
+                      <div style="font-size:11px;font-weight:600;color:#ffffff;">{{ day.ghost.label }}</div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ day.showNowLine }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:absolute;left:0;right:0;top:{{ nowLineTop }}px;height:2px;background:#ea4335;z-index:30;pointer-events:none;">
+                      <span style="position:absolute;left:-4px;top:-4px;width:9px;height:9px;border-radius:50%;background:#ea4335;"></span>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1 1 280px;max-width:320px;display:flex;flex-direction:column;gap:16px;">
+      <div style="background:#ffffff;border:1px solid #e0e0e0;border-radius:18px;padding:24px;">
+        <div style="font-size:15px;font-weight:600;color:#1d1d1f;">Tomorrow's capacity</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:10px;">
+          <div style="font-size:36px;font-weight:600;letter-spacing:-0.3px;color:{{ statusColor }};line-height:1;">{{ capPercent }}%</div>
+          <div style="font-size:13px;color:#7a7a7a;">{{ statusMsg }}</div>
+        </div>
+        <div style="height:8px;background:#f0f0f0;border-radius:9999px;margin-top:12px;overflow:hidden;">
+          <div style="height:100%;width:{{ capPercentClamped }}%;background:{{ statusColor }};border-radius:9999px;"></div>
+        </div>
+        <div style="font-size:12px;color:#7a7a7a;margin-top:6px;">{{ capLoadLabel }} of {{ capBudgetLabel }} load budget</div>
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid #e0e0e0;">
+          <div style="background:#f5f5f7;border-radius:11px;padding:12px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:#333333;margin-bottom:8px;">
+              <span>Last night's sleep</span><span style="color:#1d1d1f;font-weight:600;">{{ sleepHours }}h</span>
+            </div>
+            <input class="pacer-range" type="range" min="3" max="10" step="0.5" value="{{ sleepHours }}" onChange="{{ onSleepChange }}">
+            <div style="font-size:11px;color:#7a7a7a;margin-top:6px;">Logged once a day — feeds today's capacity only</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:#ffffff;border:1px solid #e0e0e0;border-radius:18px;padding:16px 18px;">
+        <div style="font-size:12px;font-weight:600;color:#7a7a7a;margin-bottom:8px;">Energy impact</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+          <sc-for list="{{ legend }}" as="lg" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:8px;height:8px;border-radius:50%;background:{{ lg.color }};flex-shrink:0;display:inline-block;"></span>
+              <span style="font-size:12px;color:#333333;">{{ lg.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:11px;color:#7a7a7a;margin-top:10px;line-height:1.4;">Drag a block to move it, drag its bottom edge to resize, or drag an empty slot to create one.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="{{ commandOverlayStyle }}" onClick="{{ closeCommand }}">
+    <div style="{{ commandPanelStyle }}" onClick="{{ stopClick }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.12);">
+        <span style="font-size:14px;font-weight:600;color:#ffffff;">Ask Pacer</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <sc-if value="{{ hasMessages }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ newChat }}" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:#ffffff;border-radius:9999px;padding:5px 12px;font-size:12px;cursor:pointer;" style-hover="background:rgba(255,255,255,0.12);">New chat</button>
+          </sc-if>
+          <button onClick="{{ closeCommand }}" style="background:transparent;border:none;color:#cccccc;font-size:18px;cursor:pointer;">×</button>
+        </div>
+      </div>
+      <div style="padding:24px 20px 12px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;">
+        <sc-if value="{{ showExamples }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size:14px;color:#cccccc;">Hey</div>
+          <div style="font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',Inter,system-ui,sans-serif;font-size:22px;font-weight:600;letter-spacing:-0.2px;color:#ffffff;line-height:1.3;">What do you want to schedule?</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;">
+            <sc-for list="{{ examples }}" as="ex" hint-placeholder-count="4">
+              <button onClick="{{ ex.onClick }}" style="text-align:left;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:9999px;padding:14px 18px;color:#ffffff;font-size:14px;cursor:pointer;" style-hover="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.22);">{{ ex.text }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-for list="{{ messages }}" as="m" hint-placeholder-count="0">
+          <div style="{{ m.rowStyle }}">
+            <div style="{{ m.bubbleStyle }}">{{ m.text }}</div>
+          </div>
+        </sc-for>
+        <sc-if value="{{ listening }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:40px 0;">
+            <span class="pacer-pulse-dot" style="width:14px;height:14px;border-radius:50%;background:#ff3b30;display:inline-block;"></span>
+            <span style="font-size:14px;color:#ffffff;">Listening…</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ thinking }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
+            <span class="pacer-pulse-dot" style="width:6px;height:6px;border-radius:50%;background:#cccccc;display:inline-block;"></span>
+            <span style="font-size:13px;color:#cccccc;">Thinking…</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ pending }}" hint-placeholder-val="{{ false }}">
+          <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:16px;animation:pacerRise 0.22s ease-out;">
+            <div style="font-size:14px;color:#ffffff;line-height:1.4;">{{ pending.summary }}</div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+              <button onClick="{{ cancelPending }}" style="background:transparent;border:1px solid rgba(255,255,255,0.24);color:#ffffff;border-radius:9999px;padding:8px 16px;font-size:13px;cursor:pointer;">Cancel</button>
+              <button onClick="{{ confirmPending }}" style="background:#0066cc;border:none;color:#ffffff;border-radius:9999px;padding:8px 16px;font-size:13px;cursor:pointer;" style-hover="background:#0071e3;">Confirm</button>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+      <div style="padding:14px 16px 18px;border-top:1px solid rgba(255,255,255,0.12);">
+        <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:9999px;padding:6px 6px 6px 18px;">
+          <input class="pacer-cmd-input" value="{{ commandText }}" onChange="{{ onCommandChange }}" onKeyDown="{{ onCommandKeyDown }}" placeholder="Ask Pacer to add or move something…" style="border:none;outline:none;background:transparent;flex:1;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif;font-size:14px;color:#ffffff;min-width:0;">
+          <button onClick="{{ toggleVoice }}" title="{{ voiceLabel }}" style="{{ voicePillStyle }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          </button>
+          <button onClick="{{ submitNow }}" style="width:32px;height:32px;border-radius:50%;border:none;background:#0066cc;color:#ffffff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">→</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ editingEvent }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:100;" onClick="{{ closeEdit }}">
+      <div style="width:420px;max-width:92vw;background:#ffffff;border:1px solid #e0e0e0;border-radius:18px;padding:20px;animation:pacerRise 0.2s ease-out;" onClick="{{ stopClick }}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div style="font-size:16px;font-weight:600;color:#1d1d1f;">{{ editTitleHeading }}</div>
+          <button onClick="{{ closeEdit }}" style="background:transparent;border:none;color:#7a7a7a;font-size:18px;cursor:pointer;">×</button>
+        </div>
+        <input value="{{ editingEvent.title }}" onChange="{{ editingEvent.onTitleChange }}" placeholder="Event title" style="width:100%;box-sizing:border-box;border:1px solid #e0e0e0;border-radius:8px;padding:10px 12px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif;font-size:15px;color:#1d1d1f;outline:none;" style-focus="border-color:#0066cc;">
+
+        <div style="margin-top:14px;">
+          <div style="font-size:12px;color:#7a7a7a;margin-bottom:6px;">Day</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <sc-for list="{{ editingEvent.dayOptions }}" as="d" hint-placeholder-count="7">
+              <button onClick="{{ d.onClick }}" style="{{ d.pillStyle }}">{{ d.abbr }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:14px;">
+          <div style="flex:1;">
+            <div style="font-size:12px;color:#7a7a7a;margin-bottom:6px;">Start time</div>
+            <select value="{{ editingEvent.startHour }}" onChange="{{ editingEvent.onStartChange }}" style="width:100%;background:#ffffff;color:#1d1d1f;border:1px solid #e0e0e0;border-radius:8px;padding:8px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif;font-size:14px;">
+              <sc-for list="{{ editingEvent.timeOptions }}" as="t" hint-placeholder-count="10">
+                <option value="{{ t.value }}">{{ t.label }}</option>
+              </sc-for>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:12px;color:#7a7a7a;margin-bottom:6px;">Duration</div>
+            <select value="{{ editingEvent.duration }}" onChange="{{ editingEvent.onDurationChange }}" style="width:100%;background:#ffffff;color:#1d1d1f;border:1px solid #e0e0e0;border-radius:8px;padding:8px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif;font-size:14px;">
+              <sc-for list="{{ editingEvent.durationOptions }}" as="dd" hint-placeholder-count="6">
+                <option value="{{ dd.value }}">{{ dd.label }}</option>
+              </sc-for>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <div style="font-size:12px;color:#7a7a7a;margin-bottom:6px;">How draining?</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <sc-for list="{{ editingEvent.drainOptions }}" as="dr" hint-placeholder-count="4">
+              <button onClick="{{ dr.onClick }}" style="{{ dr.pillStyle }}">{{ dr.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;margin-top:20px;">
+          <sc-if value="{{ editingEventNotNew }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ deleteEdit }}" style="background:transparent;border:none;color:#ff3b30;font-size:13px;cursor:pointer;padding:8px 0;">Delete</button>
+          </sc-if>
+          <div style="display:flex;gap:8px;margin-left:auto;">
+            <button onClick="{{ closeEdit }}" style="background:transparent;border:1px solid #0066cc;color:#0066cc;border-radius:9999px;padding:9px 18px;font-size:14px;cursor:pointer;">Cancel</button>
+            <button onClick="{{ saveEdit }}" style="background:#0066cc;border:none;color:#ffffff;border-radius:9999px;padding:9px 18px;font-size:14px;cursor:pointer;" style-hover="background:#0071e3;">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1d1d1f;border-radius:9999px;padding:10px 12px 10px 18px;color:#ffffff;font-size:13px;font-weight:600;z-index:200;display:flex;align-items:center;gap:12px;animation:pacerRise 0.2s ease-out;">
+      <span>{{ toast.msg }}</span>
+      <sc-if value="{{ toast.canUndo }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ undoLast }}" style="background:transparent;border:none;color:#2997ff;font-size:13px;font-weight:600;cursor:pointer;padding:2px 8px;">Undo</button>
+      </sc-if>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: {&quot;width&quot;: 1400, &quot;height&quot;: 900},
+  &quot;weekStart&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;Monday&quot;, &quot;options&quot;: [&quot;Monday&quot;, &quot;Sunday&quot;], &quot;tsType&quot;: &quot;'Monday'|'Sunday'&quot;, &quot;section&quot;: &quot;Calendar&quot;},
+  &quot;defaultSleepHours&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 5.5, &quot;min&quot;: 4, &quot;max&quot;: 9, &quot;step&quot;: 0.5, &quot;unit&quot;: &quot;h&quot;, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Capacity&quot;},
+  &quot;sleepBudgetMultiplier&quot;: {&quot;editor&quot;: &quot;range&quot;, &quot;default&quot;: 1.6, &quot;min&quot;: 1.0, &quot;max&quot;: 2.5, &quot;step&quot;: 0.1, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Capacity&quot;}
+}">
+const ABBR_CANON = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const FULL_CANON = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DRAIN = {
+  recovery: { weight: -0.4, color: '#34c759', fill: '#248a3d', label: 'Recovery' },
+  low: { weight: 0.5, color: '#7a7a7a', fill: '#6e6e6e', label: 'Low' },
+  medium: { weight: 1, color: '#0066cc', fill: '#0066cc', label: 'Medium' },
+  high: { weight: 1.8, color: '#ff3b30', fill: '#d70015', label: 'High' },
+};
+const DAY_NAME_MAP = { sunday:0, sun:0, monday:1, mon:1, tuesday:2, tue:2, tues:2, wednesday:3, wed:3, weds:3, thursday:4, thu:4, thur:4, thurs:4, friday:5, fri:5, saturday:6, sat:6 };
+const TIME_OPTIONS = []; for (let q = 0; q <= 95; q++) TIME_OPTIONS.push(q / 4);
+const DURATION_OPTIONS = []; for (let q = 1; q <= 16; q++) DURATION_OPTIONS.push(q / 4);
+/* a select whose value isn't in its option list silently falls back to the first option
+   (12 AM / 0.25h), so always fold the live value into the list */
+function withValue(list, v) {
+  if (v == null || list.indexOf(v) !== -1) return list;
+  return list.concat([v]).sort((a, b) => a - b);
+}
+const START_HOUR = 0, END_HOUR = 24, HOUR_H = 60, ASSUMED_SLEEP = 8;
+const SNAP = 0.25;
+const VOICE_SAMPLES = [
+  'Add gym tomorrow at 6pm for 1 hour',
+  'Move chem midterm prep to Friday',
+  'Add study group Thursday 4pm for 2 hours',
+];
+const TEXT_FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif";
+
+function rotate(arr, n) { return arr.slice(n).concat(arr.slice(0, n)); }
+function snapHour(v) { return Math.round(v / SNAP) * SNAP; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function currentNowHour() { const d = new Date(); return d.getHours() + d.getMinutes() / 60; }
+/* the grid spans the full day, so the live clock is always inside the visible window */
+function refHourFrom(nowHour) { return nowHour; }
+
+function pillChipStyle(active) {
+  return active
+    ? { background: 'rgba(0,102,204,0.08)', color: '#0066cc', border: '2px solid #0071e3', borderRadius: '9999px', padding: '5px 12px', fontSize: '13px', fontFamily: TEXT_FONT, cursor: 'pointer' }
+    : { background: '#ffffff', color: '#1d1d1f', border: '1px solid #e0e0e0', borderRadius: '9999px', padding: '6px 13px', fontSize: '13px', fontFamily: TEXT_FONT, cursor: 'pointer' };
+}
+
+function statusColorFor(percent) {
+  return percent > 100 ? '#ff3b30' : (percent >= 70 ? '#ff9500' : '#34c759');
+}
+
+function layoutColumns(list) {
+  const sorted = list.slice().sort((a, b) => a.startHour - b.startHour || (b.duration - a.duration));
+  let clusterEvents = [], colEnds = [], clusterMaxEnd = -Infinity;
+  const out = [];
+  const flush = () => {
+    clusterEvents.forEach(ce => { ce._colCount = colEnds.length; });
+    out.push.apply(out, clusterEvents);
+    clusterEvents = []; colEnds = []; clusterMaxEnd = -Infinity;
+  };
+  sorted.forEach(e => {
+    const start = e.startHour, end = e.startHour + e.duration;
+    if (clusterEvents.length && start >= clusterMaxEnd) flush();
+    let col = -1;
+    for (let c = 0; c < colEnds.length; c++) { if (colEnds[c] <= start) { col = c; break; } }
+    if (col === -1) { col = colEnds.length; colEnds.push(end); } else { colEnds[col] = end; }
+    e._col = col;
+    clusterEvents.push(e);
+    clusterMaxEnd = Math.max(clusterMaxEnd, end);
+  });
+  if (clusterEvents.length) flush();
+  return out;
+}
+
+function decimalToTimeLabelGCal(h) {
+  const hour = Math.floor(h), min = Math.round((h - hour) * 60);
+  const period = hour >= 12 ? 'pm' : 'am';
+  let hour12 = hour % 12; if (hour12 === 0) hour12 = 12;
+  return min ? hour12 + ':' + String(min).padStart(2, '0') + period : hour12 + period;
+}
+
+function decimalToTimeLabel(h) {
+  const hour = Math.floor(h), min = Math.round((h - hour) * 60);
+  const period = hour >= 12 ? 'PM' : 'AM';
+  let hour12 = hour % 12; if (hour12 === 0) hour12 = 12;
+  return min ? hour12 + ':' + String(min).padStart(2, '0') + ' ' + period : hour12 + ' ' + period;
+}
+
+function classifyDrain(text) {
+  const t = text.toLowerCase();
+  const RECOVERY = ['sleep','nap','rest','relax','chill','hangout','movie','game night','party','break'];
+  const HIGH = ['exam','midterm','final','test','presentation','interview','deadline','defense','quiz'];
+  const MEDIUM = ['class','lecture','meeting','work','shift','study','studying','homework','assignment','lab','seminar','practice','rehearsal','project'];
+  const LOW = ['gym','walk','lunch','coffee','call','errand','shopping','laundry','commute','workout','yoga'];
+  if (RECOVERY.some(k => t.includes(k))) return 'recovery';
+  if (HIGH.some(k => t.includes(k))) return 'high';
+  if (MEDIUM.some(k => t.includes(k))) return 'medium';
+  if (LOW.some(k => t.includes(k))) return 'low';
+  return 'medium';
+}
+
+function seedEvents(todayIndex, nowHour) {
+  const off = o => (todayIndex + o) % 7;
+  let id = 1;
+  const mk = (o, title, startHour, duration, drain) => ({ id: id++, day: off(o), title, startHour, duration, drain });
+  const anchor = clamp(snapHour(refHourFrom(nowHour)), START_HOUR + 4, END_HOUR - 5);
+  return [
+    mk(0, 'Gym session', anchor - 3.5, 1, 'recovery'),
+    mk(0, 'Intro to Psych lecture', anchor - 2, 1.5, 'medium'),
+    mk(0, 'Study block', anchor - 0.5, 1, 'high'),
+    mk(0, 'Coffee with Sam', anchor + 1, 1, 'low'),
+    mk(0, 'Group project meeting', anchor + 2.5, 1.5, 'medium'),
+    mk(1, 'Chem lecture', 8, 1.5, 'medium'),
+    mk(1, 'Chem midterm prep', 10, 2, 'high'),
+    mk(1, 'Group project meeting', 13, 1.5, 'medium'),
+    mk(1, 'Part-time shift', 15.5, 3, 'medium'),
+    mk(1, 'Stats problem set', 19, 2, 'high'),
+    mk(2, 'Yoga', 8, 1, 'recovery'),
+    mk(2, 'History seminar', 11, 1.5, 'medium'),
+    mk(2, 'Coffee with advisor', 14, 0.5, 'low'),
+    mk(3, 'Bio lab', 9, 2, 'medium'),
+    mk(3, 'Study group', 16, 1.5, 'medium'),
+    mk(4, 'French class', 10, 1, 'medium'),
+    mk(4, 'Movie night', 20, 2, 'recovery'),
+    mk(5, 'Weekend job shift', 9, 4, 'medium'),
+    mk(6, 'Laundry + errands', 11, 1, 'low'),
+    mk(6, 'Call parents', 18, 0.5, 'low'),
+  ];
+}
+
+function computeCapacity(events, dayIndex, sleepHours, budgetMult) {
+  const dayEvents = events.filter(e => e.day === dayIndex).slice().sort((a, b) => a.startHour - b.startHour);
+  const totalLoad = dayEvents.reduce((s, e) => s + DRAIN[e.drain].weight * e.duration, 0);
+  const budget = Math.max(4, sleepHours * budgetMult);
+  const percent = Math.max(0, Math.round((totalLoad / budget) * 100));
+  return { dayEvents, totalLoad, budget, percent };
+}
+
+function findNudge(events, tomorrowIndex, sleepHours, budgetMult) {
+  const cap = computeCapacity(events, tomorrowIndex, sleepHours, budgetMult);
+  if (cap.percent <= 100) return null;
+  const candidates = cap.dayEvents.filter(e => e.drain !== 'recovery')
+    .sort((a, b) => (DRAIN[b.drain].weight * b.duration) - (DRAIN[a.drain].weight * a.duration));
+  if (!candidates.length) return null;
+  const candidate = candidates[0];
+  const contribution = DRAIN[candidate.drain].weight * candidate.duration;
+  let best = null;
+  for (let d = 0; d < 7; d++) {
+    if (d === tomorrowIndex) continue;
+    const otherLoad = events.filter(e => e.day === d).reduce((s, e) => s + DRAIN[e.drain].weight * e.duration, 0);
+    const budget = Math.max(4, sleepHours * budgetMult);
+    const pct = Math.round(((otherLoad + contribution) / budget) * 100);
+    if (!best || pct < best.pct) best = { day: d, pct };
+  }
+  return { eventId: candidate.id, eventTitle: candidate.title, suggestedDay: best.day, resultPercent: best.pct, currentPercent: cap.percent };
+}
+
+function parseCommand(raw, events, ctx) {
+  const text = raw.trim();
+  if (!text) return { type: 'unknown' };
+  const lower = text.toLowerCase();
+  let type = 'add';
+  if (/\b(delete|cancel|remove)\b/.test(lower)) type = 'delete';
+  else if (/\b(move|resched\w*|shift|push|change)\b/.test(lower)) type = 'move';
+
+  let col = null, matchedDayStr = null;
+  if (/\btomorrow\b/.test(lower)) { col = (ctx.todayIndex + 1) % 7; matchedDayStr = 'tomorrow'; }
+  else if (/\btoday\b/.test(lower)) { col = ctx.todayIndex; matchedDayStr = 'today'; }
+  else {
+    for (const name in DAY_NAME_MAP) {
+      const re = new RegExp('\\b' + name + '\\b');
+      if (re.test(lower)) { col = (DAY_NAME_MAP[name] - ctx.startIdx + 7) % 7; matchedDayStr = name; break; }
+    }
+  }
+
+  let startHour = null, matchedTimeStr = null;
+  const tm = lower.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/);
+  if (tm) {
+    let h = parseInt(tm[1], 10); const min = tm[2] ? parseInt(tm[2], 10) : 0; const mer = tm[3];
+    if (h === 12) h = 0;
+    startHour = h + (mer === 'pm' ? 12 : 0) + min / 60;
+    matchedTimeStr = tm[0];
+  }
+
+  let duration = 1, matchedDurStr = null;
+  let dm = lower.match(/\bfor\s+(\d+(?:\.\d+)?)\s*(hours?|hrs?|h)\b/);
+  if (dm) { duration = parseFloat(dm[1]); matchedDurStr = dm[0]; }
+  else {
+    dm = lower.match(/\bfor\s+(\d+)\s*(minutes?|mins?)\b/);
+    if (dm) { duration = parseInt(dm[1], 10) / 60; matchedDurStr = dm[0]; }
+  }
+
+  let residual = text;
+  [matchedTimeStr, matchedDurStr, matchedDayStr].filter(Boolean).forEach(p => {
+    residual = residual.replace(new RegExp(p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'ig'), '');
+  });
+  const stopWords = ['add','schedule','book','create','new','event','my','the','a','an','move','reschedule','resched','shift','push','change','to','from','delete','cancel','remove','on','at','for','please','can','you','it'];
+  residual = residual.split(/\s+/).filter(w => w && !stopWords.includes(w.toLowerCase())).join(' ').replace(/\s+/g, ' ').trim();
+
+  if (type === 'add') {
+    const title = residual ? residual.charAt(0).toUpperCase() + residual.slice(1) : 'New event';
+    const day = col != null ? col : ctx.todayIndex;
+    const sh = startHour != null ? startHour : 9;
+    return {
+      type: 'add', title, day, startHour: sh, duration, drain: classifyDrain(title),
+      summary: 'Add "' + title + '" — ' + ctx.DAY_FULL[day] + ', ' + decimalToTimeLabel(sh) + ' · ' + duration + 'h',
+    };
+  }
+
+  if (!residual) return { type: 'unknown', error: 'Which event? Try naming it, e.g. "move chem exam to Friday".' };
+  const needle = residual.toLowerCase();
+  let target = events.find(e => e.title.toLowerCase().includes(needle) || needle.includes(e.title.toLowerCase()));
+  if (!target) {
+    const words = needle.split(' ').filter(w => w.length > 2);
+    target = events.find(e => words.some(w => e.title.toLowerCase().includes(w)));
+  }
+  if (!target) return { type: 'unknown', error: 'Couldn\'t find an event matching "' + residual + '".' };
+
+  if (type === 'delete') {
+    return { type: 'delete', eventId: target.id, eventTitle: target.title, summary: 'Remove "' + target.title + '" (' + ctx.DAY_FULL[target.day] + ')' };
+  }
+  const newDay = col != null ? col : target.day;
+  const newStartHour = startHour != null ? startHour : null;
+  return {
+    type: 'move', eventId: target.id, eventTitle: target.title, newDay, newStartHour,
+    summary: 'Move "' + target.title + '" to ' + ctx.DAY_FULL[newDay] + (newStartHour != null ? ', ' + decimalToTimeLabel(newStartHour) : ''),
+  };
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const weekStartsSunday = this.props.weekStart === 'Sunday';
+    const startIdx = weekStartsSunday ? 0 : 1;
+    const now = new Date();
+    const todayIndex = (now.getDay() - startIdx + 7) % 7;
+    const weekStart = new Date(now);
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(now.getDate() - todayIndex);
+    this.startIdx = startIdx;
+    this.todayIndex = todayIndex;
+    this.tomorrowIndex = (todayIndex + 1) % 7;
+    this.weekStart = weekStart;
+    this.DAY_ABBR = rotate(ABBR_CANON, startIdx);
+    this.DAY_FULL = rotate(FULL_CANON, startIdx);
+    this.budgetMult = this.props.sleepBudgetMultiplier != null ? this.props.sleepBudgetMultiplier : 1.6;
+    this._debounce = null;
+    this._toastTimer = null;
+    this._msgId = 0;
+    this._undoSnapshot = null;
+    this._drag = null;
+    this.gridRef = React.createRef();
+    this.scrollRef = React.createRef();
+    this._onDragMove = (e) => this.handleDragMove(e);
+    this._onDragEnd = (e) => this.handleDragEnd(e);
+    const nowHour = currentNowHour();
+    this.state = {
+      events: seedEvents(todayIndex, nowHour),
+      nowHour,
+      sleepHours: this.props.defaultSleepHours != null ? this.props.defaultSleepHours : 5.5,
+      showCommand: false,
+      commandText: '',
+      listening: false,
+      thinking: false,
+      messages: [],
+      pending: null,
+      editingEvent: null,
+      drag: null,
+      toast: null,
+      nudgeDismissed: false,
+      nextId: 500,
+    };
+  }
+
+  componentDidMount() {
+    this._onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.openCommand(); }
+      if (e.key === 'Escape') { this.closeCommand(); this.closeEdit(); }
+    };
+    window.addEventListener('keydown', this._onKey);
+    this._clock = setInterval(() => this.setState({ nowHour: currentNowHour() }), 60000);
+    const el = this.scrollRef.current;
+    if (el) {
+      const target = (refHourFrom(this.state.nowHour) - START_HOUR) * HOUR_H - 140;
+      el.scrollTop = Math.max(0, Math.min(target, el.scrollHeight - el.clientHeight));
+    }
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this._onKey);
+    window.removeEventListener('mousemove', this._onDragMove);
+    window.removeEventListener('mouseup', this._onDragEnd);
+    if (this._clock) clearInterval(this._clock);
+    if (this._debounce) clearTimeout(this._debounce);
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+  }
+
+  stopClick(e) { e.stopPropagation(); }
+
+  /* ---------- drag: move / resize / create ---------- */
+
+  gridMetrics() {
+    const el = this.gridRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const colW = (rect.width - 56) / 7;
+    return { rect, colW };
+  }
+
+  dayFromX(clientX) {
+    const m = this.gridMetrics();
+    if (!m) return 0;
+    return clamp(Math.floor((clientX - m.rect.left - 56) / m.colW), 0, 6);
+  }
+
+  hourFromY(clientY) {
+    const m = this.gridMetrics();
+    if (!m) return START_HOUR;
+    return START_HOUR + (clientY - m.rect.top) / HOUR_H;
+  }
+
+  beginDrag(mode, e, ev) {
+    e.preventDefault();
+    e.stopPropagation();
+    window.addEventListener('mousemove', this._onDragMove);
+    window.addEventListener('mouseup', this._onDragEnd);
+    this._drag = { mode, x: e.clientX, y: e.clientY, moved: false, orig: ev };
+    if (mode === 'create') {
+      const day = this.dayFromX(e.clientX);
+      const h = clamp(snapHour(this.hourFromY(e.clientY)), START_HOUR, END_HOUR - SNAP);
+      this._drag.anchorHour = h;
+      this._drag.day = day;
+      this.setState({ drag: { mode: 'create', day, startHour: h, duration: 0.5 } });
+    } else {
+      this.setState({ drag: { mode, id: ev.id, day: ev.day, startHour: ev.startHour, duration: ev.duration } });
+    }
+  }
+
+  onEventMouseDown(e, ev) { this.beginDrag('move', e, ev); }
+  onEventResizeMouseDown(e, ev) { this.beginDrag('resize', e, ev); }
+  onGridMouseDown(e, dayIdx) { this.beginDrag('create', e, { day: dayIdx }); }
+
+  handleDragMove(e) {
+    const d = this._drag;
+    if (!d) return;
+    const dy = e.clientY - d.y, dx = e.clientX - d.x;
+    if (Math.abs(dy) > 3 || Math.abs(dx) > 3) d.moved = true;
+    if (d.mode === 'move') {
+      const dur = d.orig.duration;
+      const startHour = clamp(snapHour(d.orig.startHour + dy / HOUR_H), START_HOUR, END_HOUR - dur);
+      this.setState({ drag: { mode: 'move', id: d.orig.id, day: this.dayFromX(e.clientX), startHour, duration: dur } });
+    } else if (d.mode === 'resize') {
+      const duration = clamp(snapHour(d.orig.duration + dy / HOUR_H), 0.5, END_HOUR - d.orig.startHour);
+      this.setState({ drag: { mode: 'resize', id: d.orig.id, day: d.orig.day, startHour: d.orig.startHour, duration } });
+    } else {
+      const cur = clamp(snapHour(this.hourFromY(e.clientY)), START_HOUR, END_HOUR);
+      const a = d.anchorHour;
+      const startHour = Math.min(a, cur);
+      const duration = Math.max(0.5, Math.abs(cur - a));
+      this.setState({ drag: { mode: 'create', day: d.day, startHour: clamp(startHour, START_HOUR, END_HOUR - duration), duration } });
+    }
+  }
+
+  handleDragEnd() {
+    const d = this._drag, drag = this.state.drag;
+    window.removeEventListener('mousemove', this._onDragMove);
+    window.removeEventListener('mouseup', this._onDragEnd);
+    this._drag = null;
+    if (!d || !drag) { this.setState({ drag: null }); return; }
+
+    if (d.mode === 'create') {
+      this.setState({ drag: null });
+      if (d.moved) this.openAddEvent(drag.day, drag.startHour, drag.duration);
+      else this.openAddEvent(drag.day, drag.startHour, 1);
+      return;
+    }
+
+    if (!d.moved) {
+      this.setState({ drag: null });
+      this.openEditEvent(d.orig.id);
+      return;
+    }
+
+    const snapshot = this.state.events;
+    const updated = snapshot.map(ev => ev.id === drag.id
+      ? Object.assign({}, ev, { day: drag.day, startHour: drag.startHour, duration: drag.duration })
+      : ev);
+    this.setState({ events: updated, drag: null });
+    const label = d.mode === 'resize'
+      ? '"' + d.orig.title + '" is now ' + drag.duration + 'h'
+      : 'Moved "' + d.orig.title + '" to ' + this.DAY_FULL[drag.day] + ', ' + decimalToTimeLabel(drag.startHour);
+    this.showToast(label, snapshot);
+  }
+
+  /* ---------- chat ---------- */
+
+  openCommand() { this.setState({ showCommand: true, pending: null, listening: false }); }
+  closeCommand() { clearTimeout(this._debounce); this.setState({ showCommand: false, commandText: '', pending: null, listening: false, thinking: false }); }
+
+  pushMessage(role, text, isError) {
+    this._msgId += 1;
+    const msg = { id: this._msgId, role, text, isError: !!isError };
+    this.setState(s => ({ messages: s.messages.concat([msg]) }));
+  }
+
+  newChat() { clearTimeout(this._debounce); this.setState({ messages: [], pending: null, commandText: '', thinking: false, listening: false }); }
+
+  onCommandChange(e) { this.setState({ commandText: e.target.value }); }
+  onCommandKeyDown(e) { if (e.key === 'Enter') { e.preventDefault(); this.submitNow(); } }
+
+  submitNow() {
+    const text = (this.state.commandText || '').trim();
+    if (!text) return;
+    clearTimeout(this._debounce);
+    this.pushMessage('user', text);
+    this.setState({ commandText: '', pending: null, thinking: true });
+    this._debounce = setTimeout(() => this.resolveCommand(text), 480);
+  }
+
+  async resolveCommand(text) {
+    const ctx = { todayIndex: this.todayIndex, startIdx: this.startIdx, DAY_FULL: this.DAY_FULL };
+    let action;
+    try {
+      action = await this.llmParseCommand(text, ctx);
+    } catch (err) {
+      action = parseCommand(text, this.state.events, ctx); // offline/parse-failure fallback
+    }
+    if (action.type === 'unknown') {
+      this.setState({ thinking: false, pending: null });
+      this.pushMessage('pacer', action.error || "Not sure what you mean — try something like \"add dentist appointment Thursday 3pm for 1 hour\".", false);
+    } else {
+      this.setState({ thinking: false, pending: action });
+    }
+  }
+
+  async llmParseCommand(text, ctx) {
+    const events = this.state.events;
+    const eventsList = events.map(e => '- id:' + e.id + ' "' + e.title + '" ' + ctx.DAY_FULL[e.day] + ' ' + decimalToTimeLabel(e.startHour) + ' (' + e.duration + 'h)').join('\n') || '(none)';
+    const dayList = ctx.DAY_FULL.map((d, i) => i + ':' + d).join(', ');
+    const system = 'You parse natural-language scheduling commands for a weekly planner app called Pacer. Today is '
+      + ctx.DAY_FULL[ctx.todayIndex] + ' (day index ' + ctx.todayIndex + '). The visible week columns, in order, are day indices 0-6 mapping to: '
+      + dayList + '. Existing events:\n' + eventsList
+      + '\n\nRespond with ONLY a single JSON object, no prose, no markdown fences, matching exactly one of these shapes:\n'
+      + '{"type":"add","title":string,"day":0-6,"startHour":number (0-23.75, quarter-hour steps),"duration":number (hours, e.g. 1.5)}\n'
+      + '{"type":"move","eventId":number,"newDay":0-6,"newStartHour":number|null}\n'
+      + '{"type":"delete","eventId":number}\n'
+      + '{"type":"unknown","error":string (short, friendly, e.g. "Which event? Try naming it.")}\n\n'
+      + 'Rules: pick eventId from the existing events list above by matching the title fuzzily. Default startHour to 9 and duration to 1 for "add" if unspecified. Use "unknown" if the command is unclear or references an event you cannot find.';
+
+    const raw = await window.claude.complete({
+      messages: [{ role: 'user', content: text }],
+      system,
+      model: 'claude-haiku-4-5',
+      max_tokens: 300,
+    });
+    const jsonStr = (raw.match(/\{[\s\S]*\}/) || [raw])[0];
+    const parsed = JSON.parse(jsonStr);
+    return this.hydrateAction(parsed, ctx);
+  }
+
+  hydrateAction(parsed, ctx) {
+    const events = this.state.events;
+    if (parsed.type === 'add') {
+      const title = (parsed.title || 'New event').toString().trim() || 'New event';
+      const day = clamp(Math.round(parsed.day != null ? parsed.day : ctx.todayIndex), 0, 6);
+      const sh = parsed.startHour != null ? clamp(snapHour(parsed.startHour), START_HOUR, END_HOUR - 0.25) : 9;
+      const duration = parsed.duration != null ? Math.max(0.25, parsed.duration) : 1;
+      return {
+        type: 'add', title, day, startHour: sh, duration, drain: classifyDrain(title),
+        summary: 'Add "' + title + '" — ' + ctx.DAY_FULL[day] + ', ' + decimalToTimeLabel(sh) + ' · ' + duration + 'h',
+      };
+    }
+    if (parsed.type === 'move') {
+      const target = events.find(e => e.id === parsed.eventId);
+      if (!target) return { type: 'unknown', error: "Couldn't find that event." };
+      const newDay = parsed.newDay != null ? clamp(Math.round(parsed.newDay), 0, 6) : target.day;
+      const newStartHour = parsed.newStartHour != null ? clamp(snapHour(parsed.newStartHour), START_HOUR, END_HOUR - 0.25) : null;
+      return {
+        type: 'move', eventId: target.id, eventTitle: target.title, newDay, newStartHour,
+        summary: 'Move "' + target.title + '" to ' + ctx.DAY_FULL[newDay] + (newStartHour != null ? ', ' + decimalToTimeLabel(newStartHour) : ''),
+      };
+    }
+    if (parsed.type === 'delete') {
+      const target = events.find(e => e.id === parsed.eventId);
+      if (!target) return { type: 'unknown', error: "Couldn't find that event." };
+      return { type: 'delete', eventId: target.id, eventTitle: target.title, summary: 'Remove "' + target.title + '" (' + ctx.DAY_FULL[target.day] + ')' };
+    }
+    return { type: 'unknown', error: parsed.error || "Couldn't understand that." };
+  }
+
+  useExample(text) { this.setState({ commandText: text }, () => this.submitNow()); }
+
+  toggleVoice() {
+    if (this.state.listening) return;
+    this.setState({ listening: true, commandText: '', pending: null });
+    const phrase = VOICE_SAMPLES[Math.floor(Math.random() * VOICE_SAMPLES.length)];
+    setTimeout(() => { this.setState({ listening: false, commandText: phrase }, () => this.submitNow()); }, 1400);
+  }
+
+  /* ---------- toast + undo ---------- */
+
+  showToast(msg, snapshot) {
+    clearTimeout(this._toastTimer);
+    this._undoSnapshot = snapshot || null;
+    this.setState({ toast: { msg, canUndo: !!snapshot } });
+    this._toastTimer = setTimeout(() => this.setState({ toast: null }), 5000);
+  }
+
+  undoLast() {
+    if (!this._undoSnapshot) return;
+    clearTimeout(this._toastTimer);
+    const restored = this._undoSnapshot;
+    this._undoSnapshot = null;
+    this.setState({ events: restored, toast: { msg: 'Undone', canUndo: false } });
+    this._toastTimer = setTimeout(() => this.setState({ toast: null }), 2000);
+  }
+
+  confirmPending() {
+    const a = this.state.pending;
+    if (!a) return;
+    const snapshot = this.state.events;
+    let msg = '';
+    if (a.type === 'add') {
+      const ev = { id: this.state.nextId, title: a.title, day: a.day, startHour: a.startHour, duration: a.duration, drain: a.drain };
+      this.setState(s => ({ events: s.events.concat([ev]), nextId: s.nextId + 1, pending: null }));
+      msg = 'Added "' + ev.title + '" — ' + this.DAY_FULL[ev.day];
+    } else if (a.type === 'move') {
+      this.setState(s => ({
+        events: s.events.map(e => e.id === a.eventId ? Object.assign({}, e, { day: a.newDay, startHour: a.newStartHour != null ? a.newStartHour : e.startHour }) : e),
+        pending: null,
+      }));
+      msg = 'Moved "' + a.eventTitle + '" to ' + this.DAY_FULL[a.newDay];
+    } else if (a.type === 'delete') {
+      this.setState(s => ({ events: s.events.filter(e => e.id !== a.eventId), pending: null }));
+      msg = 'Removed "' + a.eventTitle + '"';
+    }
+    this.pushMessage('pacer', msg);
+    this.showToast(msg, snapshot);
+  }
+
+  cancelPending() { this.setState({ pending: null }); this.pushMessage('pacer', 'Cancelled — nothing changed.'); }
+
+  /* ---------- event editing ---------- */
+
+  openAddEvent(dayIdx, startHour, duration) {
+    this.setState({ editingEvent: { id: null, isNew: true, title: '', day: dayIdx, startHour: startHour != null ? startHour : 9, duration: duration != null ? duration : 1, drain: 'medium' } });
+  }
+  openEditEvent(id) {
+    const ev = this.state.events.find(e => e.id === id);
+    if (!ev) return;
+    this.setState({ editingEvent: Object.assign({}, ev, { isNew: false }) });
+  }
+  closeEdit() { this.setState({ editingEvent: null }); }
+  updateEdit(field, value) { this.setState(s => ({ editingEvent: Object.assign({}, s.editingEvent, { [field]: value }) })); }
+
+  saveEdit() {
+    const ev = this.state.editingEvent;
+    const snapshot = this.state.events;
+    if (ev.isNew) {
+      const newEv = { id: this.state.nextId, title: ev.title.trim() || 'New event', day: ev.day, startHour: ev.startHour, duration: ev.duration, drain: ev.drain };
+      this.setState(s => ({ events: s.events.concat([newEv]), nextId: s.nextId + 1, editingEvent: null }));
+      this.showToast('Added "' + newEv.title + '"', snapshot);
+    } else {
+      const title = ev.title.trim() || 'Untitled';
+      this.setState(s => ({ events: s.events.map(e => e.id === ev.id ? { id: ev.id, title, day: ev.day, startHour: ev.startHour, duration: ev.duration, drain: ev.drain } : e), editingEvent: null }));
+      this.showToast('Saved "' + title + '"', snapshot);
+    }
+  }
+
+  deleteEdit() {
+    const ev = this.state.editingEvent;
+    const snapshot = this.state.events;
+    this.setState(s => ({ events: s.events.filter(e => e.id !== ev.id), editingEvent: null }));
+    this.showToast('Removed "' + ev.title + '"', snapshot);
+  }
+
+  onSleepChange(e) { this.setState({ sleepHours: parseFloat(e.target.value) }); }
+  dismissNudge() { this.setState({ nudgeDismissed: true }); }
+
+  applyNudgeMove() {
+    const n = findNudge(this.state.events, this.tomorrowIndex, ASSUMED_SLEEP, this.budgetMult);
+    if (!n) return;
+    const snapshot = this.state.events;
+    this.setState(s => ({ events: s.events.map(e => e.id === n.eventId ? Object.assign({}, e, { day: n.suggestedDay }) : e), nudgeDismissed: false }));
+    this.showToast('Moved "' + n.eventTitle + '" to ' + this.DAY_FULL[n.suggestedDay], snapshot);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const DAY_ABBR = this.DAY_ABBR, DAY_FULL = this.DAY_FULL;
+    const todayIndex = this.todayIndex, tomorrowIndex = this.tomorrowIndex;
+    const hours = [];
+    for (let h = START_HOUR; h < END_HOUR; h++) hours.push(h);
+    const gridHeight = hours.length * HOUR_H;
+    const drag = s.drag;
+
+    const effective = (drag && drag.id != null)
+      ? s.events.map(e => e.id === drag.id ? Object.assign({}, e, { day: drag.day, startHour: drag.startHour, duration: drag.duration }) : e)
+      : s.events;
+
+    const refHour = refHourFrom(s.nowHour);
+    const nowVisible = true;
+    const nowLineTop = Math.round((refHour - START_HOUR) * HOUR_H);
+
+    const days = DAY_ABBR.map((abbr, i) => {
+      const date = new Date(this.weekStart);
+      date.setDate(this.weekStart.getDate() + i);
+      const isToday = i === todayIndex, isTomorrow = i === tomorrowIndex;
+      const laidOut = layoutColumns(effective.filter(e => e.day === i));
+      const dayEvents = laidOut.map(e => {
+        const meta = DRAIN[e.drain];
+        const top = (e.startHour - START_HOUR) * HOUR_H + 1;
+        const height = e.duration * HOUR_H - 2;
+        const colCount = e._colCount || 1, col = e._col || 0;
+        const widthPct = 100 / colCount, leftPct = widthPct * col;
+        const showTime = height >= 34;
+        const clampTwoLine = height >= 52;
+        const isDragging = !!(drag && drag.id === e.id);
+        const titleStyle = clampTwoLine
+          ? { fontSize: '12.5px', fontWeight: 700, color: '#ffffff', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
+          : { fontSize: '12.5px', fontWeight: 700, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+        return {
+          id: e.id,
+          title: e.title,
+          titleStyle, showTime,
+          timeLabel: decimalToTimeLabelGCal(e.startHour) + ' – ' + decimalToTimeLabelGCal(e.startHour + e.duration),
+          style: { position: 'absolute', left: 'calc(' + leftPct + '% + 2px)', width: 'calc(' + widthPct + '% - 4px)', top: top + 'px', height: height + 'px', background: meta.fill, border: 'none', borderRadius: '8px', padding: (height >= 34 ? '4px 6px' : '2px 6px'), overflow: 'hidden', cursor: isDragging ? 'grabbing' : 'grab', boxSizing: 'border-box', opacity: isDragging ? 0.9 : 1, zIndex: isDragging ? 40 : 10 - col, userSelect: 'none' },
+          onMouseDown: (evt) => this.onEventMouseDown(evt, e),
+          onResizeMouseDown: (evt) => this.onEventResizeMouseDown(evt, e),
+        };
+      });
+
+      const dayCap = computeCapacity(effective, i, isToday ? s.sleepHours : ASSUMED_SLEEP, this.budgetMult);
+      const ghost = (drag && drag.mode === 'create' && drag.day === i)
+        ? {
+            label: decimalToTimeLabelGCal(drag.startHour) + ' – ' + decimalToTimeLabelGCal(drag.startHour + drag.duration),
+            style: { position: 'absolute', left: '2px', right: '2px', top: ((drag.startHour - START_HOUR) * HOUR_H + 1) + 'px', height: (drag.duration * HOUR_H - 2) + 'px', background: 'rgba(0,102,204,0.55)', border: '1px dashed #0066cc', borderRadius: '8px', padding: '4px 6px', boxSizing: 'border-box', zIndex: 35, pointerEvents: 'none' },
+          }
+        : null;
+
+      return {
+        idx: i, abbr, dateNum: date.getDate(), isToday, isNotToday: !isToday, isTomorrow, events: dayEvents, ghost,
+        showNowLine: isToday && nowVisible,
+        capPctClamped: Math.max(2, Math.min(100, dayCap.percent)),
+        capColor: statusColorFor(dayCap.percent),
+        capLabel: dayCap.percent + '% of capacity',
+        onAdd: () => this.openAddEvent(i),
+        onGridMouseDown: (evt) => this.onGridMouseDown(evt, i),
+        headerStyle: { position: 'relative', padding: '10px 6px 12px', textAlign: 'center', background: 'transparent' },
+        bodyStyle: { position: 'relative', height: gridHeight + 'px', borderRight: '1px solid #e8eaed', background: isToday ? 'rgba(66,133,244,0.03)' : 'transparent', backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0, transparent 59px, #e8eaed 59px, #e8eaed 60px)' },
+      };
+    });
+
+    /* the first label would sit half above the grid with nothing to align to — Google omits it too */
+    const hourLabels = hours.map((h, idx) => ({ label: idx === 0 ? '' : decimalToTimeLabel(h) }));
+
+    const cap = computeCapacity(s.events, tomorrowIndex, ASSUMED_SLEEP, this.budgetMult);
+    const status = cap.percent > 100 ? 'over' : (cap.percent >= 70 ? 'tight' : 'good');
+    const statusColor = statusColorFor(cap.percent);
+    const statusMsg = status === 'over' ? 'Overloaded' : status === 'tight' ? 'Getting full' : 'On track';
+
+    const todayCap = computeCapacity(s.events, todayIndex, s.sleepHours, this.budgetMult);
+    const todayStatusColor = statusColorFor(todayCap.percent);
+    const todayCapPercentClamped = Math.max(3, Math.min(100, todayCap.percent));
+
+    const nowHour = refHour;
+    let usedW = 0, futureW = 0;
+    s.events.filter(e => e.day === todayIndex).forEach(e => {
+      const w = DRAIN[e.drain].weight, start = e.startHour, end = e.startHour + e.duration;
+      if (end <= nowHour) usedW += w * e.duration;
+      else if (start >= nowHour) futureW += w * e.duration;
+      else { usedW += w * (nowHour - start); futureW += w * (end - nowHour); }
+    });
+    const todayUsedPctClamped = Math.max(0, Math.min(100, Math.round(usedW / todayCap.budget * 100)));
+    const todayFuturePctClamped = Math.max(0, Math.min(100 - todayUsedPctClamped, Math.round(futureW / todayCap.budget * 100)));
+    const todayFutureBg = 'repeating-linear-gradient(45deg, ' + todayStatusColor + ' 0 4px, transparent 4px 8px)';
+    const todayFutureBorder = todayFuturePctClamped > 0 ? ('1.5px dashed ' + todayStatusColor) : 'none';
+    const todayBreakdownLabel = 'Used ' + todayUsedPctClamped + '% so far · ' + todayFuturePctClamped + '% more scheduled today';
+
+    const nudge = (!s.nudgeDismissed) ? findNudge(s.events, tomorrowIndex, ASSUMED_SLEEP, this.budgetMult) : null;
+
+    const legend = ['recovery', 'low', 'medium', 'high'].map(k => ({ key: k, color: DRAIN[k].color, label: DRAIN[k].label }));
+
+    const examples = [
+      'Add gym tomorrow 6pm for 1 hour',
+      'Move chem midterm prep to Friday',
+      'Add study group Thursday 4pm for 2 hours',
+      'Delete part-time shift',
+    ].map(t => ({ text: t, onClick: () => this.useExample(t) }));
+
+    const messages = s.messages.map(m => ({
+      id: m.id,
+      text: m.text,
+      rowStyle: { display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' },
+      bubbleStyle: m.role === 'user'
+        ? { maxWidth: '84%', background: '#0066cc', color: '#ffffff', fontSize: '14px', lineHeight: '1.4', padding: '10px 14px', borderRadius: '18px 18px 4px 18px', animation: 'pacerRise 0.2s ease-out' }
+        : { maxWidth: '84%', background: m.isError ? 'rgba(255,59,48,0.12)' : 'rgba(255,255,255,0.08)', border: m.isError ? '1px solid rgba(255,59,48,0.4)' : '1px solid rgba(255,255,255,0.1)', color: m.isError ? '#ff6961' : '#ffffff', fontSize: '14px', lineHeight: '1.4', padding: '10px 14px', borderRadius: '18px 18px 18px 4px', animation: 'pacerRise 0.2s ease-out' },
+    }));
+
+    let edit = null;
+    if (s.editingEvent) {
+      const ev = s.editingEvent;
+      edit = {
+        title: ev.title,
+        isNew: ev.isNew,
+        dayOptions: DAY_ABBR.map((abbr, i) => ({ abbr, idx: i, active: ev.day === i, pillStyle: pillChipStyle(ev.day === i), onClick: () => this.updateEdit('day', i) })),
+        timeOptions: withValue(TIME_OPTIONS, ev.startHour).map(t => ({ value: t, label: decimalToTimeLabel(t) })),
+        durationOptions: withValue(DURATION_OPTIONS, ev.duration).map(d => ({ value: d, label: d + 'h' })),
+        startHour: ev.startHour,
+        duration: ev.duration,
+        drainOptions: ['recovery', 'low', 'medium', 'high'].map(k => ({ key: k, label: DRAIN[k].label, active: ev.drain === k, pillStyle: pillChipStyle(ev.drain === k), onClick: () => this.updateEdit('drain', k) })),
+        onTitleChange: (e) => this.updateEdit('title', e.target.value),
+        onStartChange: (e) => this.updateEdit('startHour', parseFloat(e.target.value)),
+        onDurationChange: (e) => this.updateEdit('duration', parseFloat(e.target.value)),
+      };
+    }
+
+    const endDate = new Date(this.weekStart); endDate.setDate(this.weekStart.getDate() + 6);
+    const startLabel = MONTHS[this.weekStart.getMonth()] + ' ' + this.weekStart.getDate();
+    const endLabel = this.weekStart.getMonth() === endDate.getMonth() ? String(endDate.getDate()) : MONTHS[endDate.getMonth()] + ' ' + endDate.getDate();
+
+    const showExamples = s.messages.length === 0 && !s.listening && !s.pending && !s.thinking;
+
+    return {
+      dateRangeLabel: startLabel + ' – ' + endLabel,
+      days, hourLabels, gridHeight, nowLineTop,
+      gridRef: this.gridRef, scrollRef: this.scrollRef,
+      capPercent: cap.percent, capPercentClamped: Math.max(3, Math.min(100, cap.percent)),
+      todayCapPercent: todayCap.percent, todayCapPercentClamped, todayStatusColor,
+      todayUsedPctClamped, todayFuturePctClamped, todayFutureBg, todayFutureBorder, todayBreakdownLabel,
+      capLoadLabel: cap.totalLoad.toFixed(1), capBudgetLabel: cap.budget.toFixed(1),
+      statusColor, statusMsg, tomorrowLabel: DAY_FULL[tomorrowIndex],
+      sleepHours: s.sleepHours, onSleepChange: (e) => this.onSleepChange(e),
+      legend,
+      nudge, nudgeDayLabel: nudge ? DAY_FULL[nudge.suggestedDay] : '',
+      nudgeEventTitle: nudge ? nudge.eventTitle : '',
+      dismissNudge: () => this.dismissNudge(), applyNudgeMove: () => this.applyNudgeMove(),
+      showCommand: s.showCommand, openCommand: () => this.openCommand(), closeCommand: () => this.closeCommand(),
+      commandOverlayStyle: { position: 'fixed', inset: 0, zIndex: 100, pointerEvents: s.showCommand ? 'auto' : 'none' },
+      commandPanelStyle: { position: 'absolute', top: 0, right: 0, bottom: 0, width: '400px', maxWidth: '92vw', background: '#272729', borderLeft: '1px solid rgba(255,255,255,0.12)', display: 'flex', flexDirection: 'column', pointerEvents: s.showCommand ? 'auto' : 'none', transform: s.showCommand ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.32s cubic-bezier(0.22,1,0.36,1)' },
+      stopClick: (e) => this.stopClick(e),
+      messages,
+      commandText: s.commandText, onCommandChange: (e) => this.onCommandChange(e), onCommandKeyDown: (e) => this.onCommandKeyDown(e), submitNow: () => this.submitNow(),
+      listening: s.listening, toggleVoice: () => this.toggleVoice(),
+      voiceLabel: s.listening ? 'Listening…' : 'Voice input',
+      voicePillStyle: { width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid ' + (s.listening ? 'rgba(255,59,48,0.4)' : 'rgba(255,255,255,0.14)'), background: s.listening ? 'rgba(255,59,48,0.12)' : 'rgba(255,255,255,0.06)', color: s.listening ? '#ff3b30' : '#ffffff', cursor: 'pointer', flexShrink: 0, animation: s.listening ? 'pacerPulse 1s ease-in-out infinite' : 'none' },
+      thinking: s.thinking,
+      pending: s.pending, confirmPending: () => this.confirmPending(), cancelPending: () => this.cancelPending(),
+      examples, showExamples,
+      hasMessages: s.messages.length > 0, newChat: () => this.newChat(),
+      editingEvent: edit, editingEventNotNew: !!(s.editingEvent && !s.editingEvent.isNew),
+      editTitleHeading: s.editingEvent ? (s.editingEvent.isNew ? 'New event' : 'Edit event') : '',
+      closeEdit: () => this.closeEdit(), saveEdit: () => this.saveEdit(), deleteEdit: () => this.deleteEdit(),
+      toast: s.toast, undoLast: () => this.undoLast(),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

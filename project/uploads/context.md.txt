@@ -1,0 +1,27 @@
+Pacer — voice-controlled calendar for students, fixes overload before it hits.
+Core idea: Talk to it, it builds/edits your calendar. Shows tomorrow's load so you can fix it in advance.
+MVP (must build):
+	•	Weekly calendar grid
+	•	Voice or text input → AI adds event to calendar
+	•	Voice/text → AI moves/edits existing event
+	•	Manual edit as backup
+	•	Color-coded blocks by how "draining" a task is
+	•	Tomorrow's capacity bar (based on what's scheduled)
+	•	Nudge + reschedule suggestion when tomorrow's overloaded
+	•	Sleep slider (manual input, feeds the capacity calc)
+Nice-to-have (cut if short on time):
+	•	Full mental/physical/social battery breakdown
+	•	Auto-predicted sleep
+	•	Recovery time suggestions
+	•	Syllabus OCR scanning
+	•	Google Calendar sync
+	•	AI drafts messages (e.g. decline a shift)
+	•	Lockdown mode
+Stack:
+	•	Frontend: Next.js + Tailwind
+	•	Backend: Flask (Python)
+	•	Voice: Groq Whisper
+	•	AI brain: Groq Llama 3.3 70B w/ tool-calling
+	•	Storage: just local state for now, no DB needed
+Build order: Calendar shell → text-to-event working → add voice → capacity bar/nudge → make it look good.
+That's the whole thing. Ping me when you want files scaffolded.

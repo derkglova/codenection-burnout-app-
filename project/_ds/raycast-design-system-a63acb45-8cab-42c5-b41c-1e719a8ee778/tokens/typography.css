@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+:root{
+--font-sans:'Inter','Inter Fallback',system-ui,-apple-system,sans-serif;
+--font-feature-default:"calt","kern","liga","ss03";
+--font-feature-display:"calt","kern","ss02","ss03","ss08";
+--text-display-xl-size:64px;--text-display-xl-weight:600;--text-display-xl-leading:1.1;--text-display-xl-tracking:0px;
+--text-display-lg-size:56px;--text-display-lg-weight:500;--text-display-lg-leading:1.17;--text-display-lg-tracking:0.2px;
+--text-heading-xl-size:24px;--text-heading-xl-weight:500;--text-heading-xl-leading:1.6;--text-heading-xl-tracking:0.2px;
+--text-heading-lg-size:22px;--text-heading-lg-weight:500;--text-heading-lg-leading:1.15;--text-heading-lg-tracking:0px;
+--text-heading-md-size:20px;--text-heading-md-weight:500;--text-heading-md-leading:1.4;--text-heading-md-tracking:0.2px;
+--text-heading-sm-size:18px;--text-heading-sm-weight:500;--text-heading-sm-leading:1.4;--text-heading-sm-tracking:0.2px;
+--text-body-lg-size:18px;--text-body-lg-weight:400;--text-body-lg-leading:1.6;--text-body-lg-tracking:0px;
+--text-body-md-size:16px;--text-body-md-weight:400;--text-body-md-leading:1.6;--text-body-md-tracking:0px;
+--text-body-strong-size:16px;--text-body-strong-weight:500;--text-body-strong-leading:1.4;--text-body-strong-tracking:0.2px;
+--text-body-sm-size:14px;--text-body-sm-weight:400;--text-body-sm-leading:1.6;--text-body-sm-tracking:0px;
+--text-body-sm-strong-size:14px;--text-body-sm-strong-weight:500;--text-body-sm-strong-leading:1.6;--text-body-sm-strong-tracking:0.2px;
+--text-caption-md-size:13px;--text-caption-md-weight:400;--text-caption-md-leading:1.4;--text-caption-md-tracking:0.1px;
+--text-caption-sm-size:12px;--text-caption-sm-weight:400;--text-caption-sm-leading:1.5;--text-caption-sm-tracking:0.4px;
+--text-link-md-size:16px;--text-link-md-weight:500;--text-link-md-leading:1.4;--text-link-md-tracking:0.3px;
+--text-button-md-size:14px;--text-button-md-weight:500;--text-button-md-leading:1.6;--text-button-md-tracking:0.2px;
+}
+body{font-family:var(--font-sans);font-feature-settings:var(--font-feature-default);}

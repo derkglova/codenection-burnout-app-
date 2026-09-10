@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root {
+  --font-text: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-display: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #1d1d1f;
+  font-family: var(--font-text);
+  font-feature-settings: "calt", "kern", "liga", "ss03";
+}
+
+a {
+  color: #0066cc;
+  text-decoration: none;
+}
+a:hover {
+  color: #0071e3;
+}
+
+.pacer-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 9999px;
+  outline: none;
+}
+.pacer-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0066cc;
+  cursor: pointer;
+}
+.pacer-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0066cc;
+  cursor: pointer;
+  border: none;
+}
+
+.pacer-cmd-input::placeholder {
+  color: #8e8e93;
+}
+
+.pacer-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.pacer-scroll::-webkit-scrollbar-thumb {
+  background: #dadce0;
+  border-radius: 9999px;
+  border: 3px solid #ffffff;
+}
+
+@keyframes pacerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+@keyframes pacerRise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.pacer-pulse-dot {
+  animation: pacerPulse 1s ease-in-out infinite;
+}
+.pacer-rise {
+  animation: pacerRise 0.2s ease-out;
+}
