@@ -27,9 +27,9 @@ export default function AskPacerPanel({
   onExampleClick,
   listening,
   thinking,
-  pending,
-  onConfirmPending,
-  onCancelPending,
+  pendingActions,
+  onConfirmPendingActions,
+  onCancelPendingActions,
   commandText,
   onCommandChange,
   onCommandKeyDown,
@@ -46,9 +46,9 @@ export default function AskPacerPanel({
   onExampleClick: (text: string) => void;
   listening: boolean;
   thinking: boolean;
-  pending: PendingAction | null;
-  onConfirmPending: () => void;
-  onCancelPending: () => void;
+  pendingActions: PendingAction[];
+  onConfirmPendingActions: () => void;
+  onCancelPendingActions: () => void;
   commandText: string;
   onCommandChange: (v: string) => void;
   onCommandKeyDown: (e: React.KeyboardEvent) => void;
@@ -134,15 +134,22 @@ export default function AskPacerPanel({
             </div>
           )}
 
-          {pending && (
+          {pendingActions.length > 0 && (
             <div className="pacer-rise" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 18, padding: 16 }}>
-              <div style={{ fontSize: 14, color: "#ffffff", lineHeight: 1.4 }}>{pending.summary}</div>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+                {pendingActions.map((a, i) => (
+                  <li key={i} style={{ fontSize: 14, color: "#ffffff", lineHeight: 1.4, display: "flex", gap: 8 }}>
+                    <span style={{ color: "#8e8e93" }}>•</span>
+                    <span>{a.summary}</span>
+                  </li>
+                ))}
+              </ul>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
-                <button onClick={onCancelPending} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.24)", color: "#ffffff", borderRadius: 9999, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}>
+                <button onClick={onCancelPendingActions} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.24)", color: "#ffffff", borderRadius: 9999, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}>
                   Cancel
                 </button>
-                <button onClick={onConfirmPending} style={{ background: "#0066cc", border: "none", color: "#ffffff", borderRadius: 9999, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}>
-                  Confirm
+                <button onClick={onConfirmPendingActions} style={{ background: "#0066cc", border: "none", color: "#ffffff", borderRadius: 9999, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}>
+                  {pendingActions.length > 1 ? "Confirm all" : "Confirm"}
                 </button>
               </div>
             </div>

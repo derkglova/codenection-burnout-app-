@@ -1,33 +1,45 @@
-import { parseCommandFallback, type ParsedCommand } from "./commandParserFallback";
-import type { CommandContext, PacerEvent } from "./types";
+import { parseCommandFallback } from "./commandParserFallback";
+import type { ChatTurn, CommandContext, PacerEvent, PendingAction } from "./types";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5001";
 
 export interface ParseResult {
-  action: ParsedCommand;
+  reply: string;
+  actions: PendingAction[];
   source: "llm" | "regex" | "regex-offline";
 }
 
-/** Asks the backend (Groq Llama tool-calling, with its own regex fallback)
- * to turn a natural-language command into a structured action. If the
- * backend itself can't be reached, falls back to an equivalent regex parser
- * running entirely in the browser so "Ask Pacer" still works offline. */
+/** Asks the backend (a LangChain/Groq tool-calling agent, with its own
+ * regex fallback) to turn a natural-language message into a conversational
+ * reply plus zero or more proposed actions. If the backend itself can't be
+ * reached, falls back to an equivalent regex parser running entirely in the
+ * browser so "Ask Pacer" still works offline (single action only — no
+ * reasoning/tool-calling possible without an LLM). */
 export async function parseCommandRemote(
   text: string,
   events: PacerEvent[],
-  ctx: CommandContext
+  ctx: CommandContext,
+  history: ChatTurn[]
 ): Promise<ParseResult> {
   try {
     const res = await fetch(`${API_BASE}/api/command`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, context: { ...ctx, events } }),
+      body: JSON.stringify({ text, context: { ...ctx, events }, history }),
     });
     if (!res.ok) throw new Error(`command request failed: ${res.status}`);
     const data = await res.json();
-    return { action: data.action, source: data.source };
+    return { reply: data.reply ?? "", actions: data.actions ?? [], source: data.source };
   } catch {
-    return { action: parseCommandFallback(text, events, ctx), source: "regex-offline" };
+    const action = parseCommandFallback(text, events, ctx);
+    if (action.type === "unknown") {
+      return {
+        reply: action.error || "Not sure what you mean — try describing what to add, move, or delete.",
+        actions: [],
+        source: "regex-offline",
+      };
+    }
+    return { reply: "", actions: [action], source: "regex-offline" };
   }
 }
 

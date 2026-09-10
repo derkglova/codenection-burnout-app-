@@ -65,7 +65,7 @@ export default function PacerPage() {
     return `${startLabel} – ${endLabel}`;
   }, [p.weekStart]);
 
-  const showExamples = p.messages.length === 0 && !p.listening && !p.pending && !p.thinking;
+  const showExamples = p.messages.length === 0 && !p.listening && p.pendingActions.length === 0 && !p.thinking;
 
   return (
     <div style={{ minHeight: "100vh", background: "#ffffff", color: "#1d1d1f", display: "flex", flexDirection: "column", flex: 1 }}>
@@ -113,9 +113,9 @@ export default function PacerPage() {
         onExampleClick={p.useExample}
         listening={p.listening}
         thinking={p.thinking}
-        pending={p.pending}
-        onConfirmPending={p.confirmPending}
-        onCancelPending={p.cancelPending}
+        pendingActions={p.pendingActions}
+        onConfirmPendingActions={p.confirmPendingActions}
+        onCancelPendingActions={p.cancelPendingActions}
         commandText={p.commandText}
         onCommandChange={p.onCommandChange}
         onCommandKeyDown={p.onCommandKeyDown}

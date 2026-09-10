@@ -20,6 +20,7 @@ import {
 } from "@/lib/time";
 import type {
   ChatMessage,
+  ChatTurn,
   CommandContext,
   DragState,
   EditingEvent,
@@ -84,7 +85,7 @@ export function usePacer() {
   const [listening, setListening] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [pending, setPending] = useState<PendingAction | null>(null);
+  const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [editingEvent, setEditingEvent] = useState<EditingEvent | null>(null);
   const [dragPreview, setDragPreview] = useState<DragState | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -271,21 +272,21 @@ export function usePacer() {
 
   function openCommand() {
     setShowCommand(true);
-    setPending(null);
+    setPendingActions([]);
     setListening(false);
   }
   function closeCommand() {
     clearTimeout(debounceRef.current);
     setShowCommand(false);
     setCommandText("");
-    setPending(null);
+    setPendingActions([]);
     setListening(false);
     setThinking(false);
   }
   function newChat() {
     clearTimeout(debounceRef.current);
     setMessages([]);
-    setPending(null);
+    setPendingActions([]);
     setCommandText("");
     setThinking(false);
     setListening(false);
@@ -310,22 +311,23 @@ export function usePacer() {
     const text = (textOverride ?? commandText).trim();
     if (!text) return;
     clearTimeout(debounceRef.current);
+    const history: ChatTurn[] = messages.slice(-12).map((m) => ({ role: m.role, text: m.text }));
     pushMessage("user", text);
     setCommandText("");
-    setPending(null);
+    setPendingActions([]);
     setThinking(true);
-    debounceRef.current = setTimeout(() => resolveCommand(text), 480);
+    debounceRef.current = setTimeout(() => resolveCommand(text, history), 480);
   }
 
-  async function resolveCommand(text: string) {
-    const ctx: CommandContext = { todayIndex, startIdx, dayFull: DAY_FULL };
-    const { action } = await parseCommandRemote(text, events, ctx);
+  async function resolveCommand(text: string, history: ChatTurn[]) {
+    const ctx: CommandContext = { todayIndex, startIdx, dayFull: DAY_FULL, sleepHours };
+    const { reply, actions } = await parseCommandRemote(text, events, ctx, history);
     setThinking(false);
-    if (action.type === "unknown") {
-      setPending(null);
-      pushMessage("pacer", action.error || 'Not sure what you mean — try something like "add dentist appointment Thursday 3pm for 1 hour".', false);
-    } else {
-      setPending(action);
+    if (reply) pushMessage("pacer", reply);
+    if (actions.length > 0) {
+      setPendingActions(actions);
+    } else if (!reply) {
+      pushMessage("pacer", 'Not sure what you mean — try something like "add dentist appointment Thursday 3pm for 1 hour".', false);
     }
   }
 
@@ -339,7 +341,7 @@ export function usePacer() {
       setListening(false);
       return;
     }
-    setPending(null);
+    setPendingActions([]);
     setMicUnavailable(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -374,29 +376,33 @@ export function usePacer() {
 
   /* ---------- toast-confirmed AI actions ---------- */
 
-  function confirmPending() {
-    if (!pending) return;
-    const a = pending;
+  function confirmPendingActions() {
+    if (pendingActions.length === 0) return;
     const snapshot = events;
-    let msg = "";
-    if (a.type === "add") {
-      const ev: PacerEvent = { id: nextIdRef.current++, title: a.title, day: a.day, startHour: a.startHour, duration: a.duration, drain: a.drain };
-      setEvents(snapshot.concat([ev]));
-      msg = `Added "${ev.title}" — ${DAY_FULL[ev.day]}`;
-    } else if (a.type === "move") {
-      setEvents(snapshot.map((e) => (e.id === a.eventId ? { ...e, day: a.newDay, startHour: a.newStartHour != null ? a.newStartHour : e.startHour } : e)));
-      msg = `Moved "${a.eventTitle}" to ${DAY_FULL[a.newDay]}`;
-    } else if (a.type === "delete") {
-      setEvents(snapshot.filter((e) => e.id !== a.eventId));
-      msg = `Removed "${a.eventTitle}"`;
+    let next = events;
+    const labels: string[] = [];
+    for (const a of pendingActions) {
+      if (a.type === "add") {
+        const ev: PacerEvent = { id: nextIdRef.current++, title: a.title, day: a.day, startHour: a.startHour, duration: a.duration, drain: a.drain };
+        next = next.concat([ev]);
+        labels.push(`Added "${ev.title}" — ${DAY_FULL[ev.day]}`);
+      } else if (a.type === "move") {
+        next = next.map((e) => (e.id === a.eventId ? { ...e, day: a.newDay, startHour: a.newStartHour != null ? a.newStartHour : e.startHour } : e));
+        labels.push(`Moved "${a.eventTitle}" to ${DAY_FULL[a.newDay]}`);
+      } else if (a.type === "delete") {
+        next = next.filter((e) => e.id !== a.eventId);
+        labels.push(`Removed "${a.eventTitle}"`);
+      }
     }
-    setPending(null);
+    setEvents(next);
+    const msg = labels.length === 1 ? labels[0] : `${labels.length} changes applied: ${labels.join("; ")}`;
+    setPendingActions([]);
     pushMessage("pacer", msg);
     showToast(msg, snapshot);
   }
 
-  function cancelPending() {
-    setPending(null);
+  function cancelPendingActions() {
+    setPendingActions([]);
     pushMessage("pacer", "Cancelled — nothing changed.");
   }
 
@@ -462,14 +468,14 @@ export function usePacer() {
     // config
     DAY_ABBR, DAY_FULL, todayIndex, tomorrowIndex, weekStart, startIdx, budgetMult: BUDGET_MULT,
     // state
-    events, nowHour, sleepHours, showCommand, commandText, listening, thinking, messages, pending,
+    events, nowHour, sleepHours, showCommand, commandText, listening, thinking, messages, pendingActions,
     editingEvent, dragPreview, toast, nudgeDismissed, micUnavailable,
     // refs
     gridRef, scrollRef,
     // actions
     setSleepHours: onSleepChange,
     openCommand, closeCommand, newChat, onCommandChange, onCommandKeyDown, submitNow, useExample, toggleVoice,
-    confirmPending, cancelPending,
+    confirmPendingActions, cancelPendingActions,
     openAddEvent, openEditEvent, closeEdit, updateEdit, saveEdit, deleteEdit,
     dismissNudge, applyNudgeMove,
     onEventMouseDown, onEventResizeMouseDown, onGridMouseDown,

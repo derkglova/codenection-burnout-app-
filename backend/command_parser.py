@@ -1,21 +1,15 @@
-"""Natural-language scheduling command parsing.
+"""Shared event-normalization helpers, plus the dependency-free regex
+parser used as a last-resort fallback (no GROQ_API_KEY configured, or the
+LangChain tool-calling agent in agent.py fails for any reason).
 
-Two paths, mirroring the Claude-Design prototype's dual-path design
-(llmParseCommand + parseCommand fallback in Pacer.dc.html):
-
-1. `parse_with_llm` — sends the command + current events to Groq's
-   Llama 3.3 70B model and asks for a single strict JSON action.
-2. `parse_with_regex` — a dependency-free regex parser used when no
-   GROQ_API_KEY is configured, or the LLM call/parse fails.
-
-Both funnel through `hydrate_action`, which validates/normalizes the
-result against the real event list so the frontend always gets a
-well-formed action (or an "unknown" with a friendly error).
+`hydrate_action` is the single place that validates/normalizes a raw
+{type, ...} dict against the real event list — reused both by the regex
+parser below and by agent.py's tools, so day/hour clamping, quarter-hour
+snapping, drain classification, and eventId lookup never get duplicated.
 """
-import json
 import re
 
-from drain import DRAIN, classify_drain
+from drain import classify_drain
 
 SNAP = 0.25
 START_HOUR = 0
@@ -46,50 +40,6 @@ def decimal_to_time_label(h):
     period = "PM" if hour >= 12 else "AM"
     hour12 = hour % 12 or 12
     return f"{hour12}:{minute:02d} {period}" if minute else f"{hour12} {period}"
-
-
-def _build_system_prompt(ctx):
-    events = ctx["events"]
-    day_full = ctx["dayFull"]
-    today_index = ctx["todayIndex"]
-    events_list = "\n".join(
-        f'- id:{e["id"]} "{e["title"]}" {day_full[e["day"]]} '
-        f'{decimal_to_time_label(e["startHour"])} ({e["duration"]}h)'
-        for e in events
-    ) or "(none)"
-    day_list = ", ".join(f"{i}:{d}" for i, d in enumerate(day_full))
-    return (
-        "You parse natural-language scheduling commands for a weekly planner app called Pacer. "
-        f"Today is {day_full[today_index]} (day index {today_index}). "
-        "The visible week columns, in order, are day indices 0-6 mapping to: "
-        f"{day_list}. Existing events:\n{events_list}\n\n"
-        "Respond with ONLY a single JSON object, no prose, no markdown fences, matching exactly one of these shapes:\n"
-        '{"type":"add","title":string,"day":0-6,"startHour":number (0-23.75, quarter-hour steps),"duration":number (hours, e.g. 1.5)}\n'
-        '{"type":"move","eventId":number,"newDay":0-6,"newStartHour":number|null}\n'
-        '{"type":"delete","eventId":number}\n'
-        '{"type":"unknown","error":string (short, friendly, e.g. "Which event? Try naming it.")}\n\n'
-        'Rules: pick eventId from the existing events list above by matching the title fuzzily. '
-        'Default startHour to 9 and duration to 1 for "add" if unspecified. '
-        'Use "unknown" if the command is unclear or references an event you cannot find.'
-    )
-
-
-def parse_with_llm(groq_client, model, text, ctx):
-    system = _build_system_prompt(ctx)
-    completion = groq_client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": text},
-        ],
-        max_tokens=300,
-        temperature=0,
-    )
-    raw = completion.choices[0].message.content or ""
-    match = re.search(r"\{[\s\S]*\}", raw)
-    json_str = match.group(0) if match else raw
-    parsed = json.loads(json_str)
-    return hydrate_action(parsed, ctx)
 
 
 def hydrate_action(parsed, ctx):
@@ -233,13 +183,3 @@ def parse_with_regex(text, ctx):
         "type": "move", "eventId": target["id"], "eventTitle": target["title"],
         "newDay": new_day, "newStartHour": start_hour, "summary": summary,
     }
-
-
-def parse_command(groq_client, model, text, ctx):
-    """Try the LLM path; fall back to the offline regex parser on any failure."""
-    if groq_client is not None:
-        try:
-            return parse_with_llm(groq_client, model, text, ctx), "llm"
-        except Exception:
-            pass
-    return parse_with_regex(text, ctx), "regex"

@@ -58,4 +58,10 @@ export interface CommandContext {
   todayIndex: number;
   startIdx: number;
   dayFull: string[];
+  sleepHours: number;
+}
+
+export interface ChatTurn {
+  role: ChatRole;
+  text: string;
 }
