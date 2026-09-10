@@ -59,6 +59,7 @@ export interface CommandContext {
   startIdx: number;
   dayFull: string[];
   sleepHours: number;
+  nowHour: number;
 }
 
 export interface ChatTurn {

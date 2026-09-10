@@ -64,12 +64,12 @@ export function parseCommandFallback(raw: string, events: PacerEvent[], ctx: Com
 
   let duration = 1;
   let matchedDurStr: string | null = null;
-  let dm = lower.match(/\bfor\s+(\d+(?:\.\d+)?)\s*(hours?|hrs?|h)\b/);
+  let dm = lower.match(/\b(?:for\s+)?(\d+(?:\.\d+)?)\s*(hours?|hrs?|h)\b/);
   if (dm) {
     duration = parseFloat(dm[1]);
     matchedDurStr = dm[0];
   } else {
-    dm = lower.match(/\bfor\s+(\d+)\s*(minutes?|mins?)\b/);
+    dm = lower.match(/\b(?:for\s+)?(\d+)\s*(minutes?|mins?)\b/);
     if (dm) {
       duration = parseInt(dm[1], 10) / 60;
       matchedDurStr = dm[0];

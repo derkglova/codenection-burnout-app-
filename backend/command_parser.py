@@ -42,6 +42,47 @@ def decimal_to_time_label(h):
     return f"{hour12}:{minute:02d} {period}" if minute else f"{hour12} {period}"
 
 
+def _find_recovery_slot(events, day, duration, preferred_start, today_index=None, now_hour=None):
+    """Recovery blocks are meant to be a clear break, so unlike other adds
+    they shouldn't land on top of an existing event. Find every free gap
+    that day big enough for the block, and place it in whichever gap is
+    closest to the model's preferred time (as close to that time as the
+    gap allows) — not just the earliest chronological gap, which could be
+    hours away (e.g. midnight) from where the break was actually wanted.
+    Falls back to the preferred time verbatim if the day has no gap big
+    enough — better to overlap than to silently drop the suggestion.
+
+    If this is today, the hours before right now are also treated as
+    unavailable — a recovery break already in the past is useless, so it
+    should never win over a real free slot later today."""
+    duration = min(duration, END_HOUR - START_HOUR)
+    day_events = sorted((e for e in events if e["day"] == day), key=lambda e: e["startHour"])
+    if day == today_index and now_hour is not None and now_hour > START_HOUR:
+        day_events = sorted(
+            day_events + [{"startHour": START_HOUR, "duration": min(now_hour, END_HOUR) - START_HOUR}],
+            key=lambda e: e["startHour"],
+        )
+
+    gaps = []
+    cursor = START_HOUR
+    for e in day_events:
+        if e["startHour"] > cursor:
+            gaps.append((cursor, e["startHour"]))
+        cursor = max(cursor, e["startHour"] + e["duration"])
+    if cursor < END_HOUR:
+        gaps.append((cursor, END_HOUR))
+
+    usable = [(gs, ge) for gs, ge in gaps if ge - gs >= duration]
+    if not usable:
+        return preferred_start
+
+    def slot_in_gap(gs, ge):
+        return snap_hour(clamp(preferred_start, gs, ge - duration))
+
+    best_gap = min(usable, key=lambda g: abs(slot_in_gap(*g) - preferred_start))
+    return clamp(slot_in_gap(*best_gap), START_HOUR, END_HOUR - duration)
+
+
 def hydrate_action(parsed, ctx):
     events = ctx["events"]
     day_full = ctx["dayFull"]
@@ -55,9 +96,12 @@ def hydrate_action(parsed, ctx):
         else:
             sh = 9
         duration = max(0.25, parsed["duration"]) if parsed.get("duration") is not None else 1
+        drain = classify_drain(title)
+        if drain == "recovery":
+            sh = _find_recovery_slot(events, day, duration, sh, ctx.get("todayIndex"), ctx.get("nowHour"))
         return {
             "type": "add", "title": title, "day": day, "startHour": sh, "duration": duration,
-            "drain": classify_drain(title),
+            "drain": drain,
             "summary": f'Add "{title}" — {day_full[day]}, {decimal_to_time_label(sh)} · {duration}h',
         }
 
@@ -133,12 +177,12 @@ def parse_with_regex(text, ctx):
 
     duration = 1
     matched_dur_str = None
-    dm = re.search(r"\bfor\s+(\d+(?:\.\d+)?)\s*(hours?|hrs?|h)\b", lower)
+    dm = re.search(r"\b(?:for\s+)?(\d+(?:\.\d+)?)\s*(hours?|hrs?|h)\b", lower)
     if dm:
         duration = float(dm.group(1))
         matched_dur_str = dm.group(0)
     else:
-        dm = re.search(r"\bfor\s+(\d+)\s*(minutes?|mins?)\b", lower)
+        dm = re.search(r"\b(?:for\s+)?(\d+)\s*(minutes?|mins?)\b", lower)
         if dm:
             duration = int(dm.group(1)) / 60
             matched_dur_str = dm.group(0)
@@ -155,11 +199,7 @@ def parse_with_regex(text, ctx):
         title = (residual[0].upper() + residual[1:]) if residual else "New event"
         day = col if col is not None else today_index
         sh = start_hour if start_hour is not None else 9
-        return {
-            "type": "add", "title": title, "day": day, "startHour": sh, "duration": duration,
-            "drain": classify_drain(title),
-            "summary": f'Add "{title}" — {day_full[day]}, {decimal_to_time_label(sh)} · {duration}h',
-        }
+        return hydrate_action({"type": "add", "title": title, "day": day, "startHour": sh, "duration": duration}, ctx)
 
     if not residual:
         return {"type": "unknown", "error": 'Which event? Try naming it, e.g. "move chem exam to Friday".'}

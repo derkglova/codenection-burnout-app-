@@ -28,6 +28,8 @@ export default function AskPacerPanel({
   listening,
   thinking,
   pendingActions,
+  pendingChecked,
+  onToggleActionChecked,
   onConfirmPendingActions,
   onCancelPendingActions,
   commandText,
@@ -47,6 +49,8 @@ export default function AskPacerPanel({
   listening: boolean;
   thinking: boolean;
   pendingActions: PendingAction[];
+  pendingChecked: boolean[];
+  onToggleActionChecked: (index: number) => void;
   onConfirmPendingActions: () => void;
   onCancelPendingActions: () => void;
   commandText: string;
@@ -66,7 +70,7 @@ export default function AskPacerPanel({
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 100, pointerEvents: show ? "auto" : "none" }} onClick={onClose}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 100, pointerEvents: "none" }}>
       <div
         style={{
           position: "absolute", top: 0, right: 0, bottom: 0, width: 400, maxWidth: "92vw", background: "#272729",
@@ -74,7 +78,6 @@ export default function AskPacerPanel({
           pointerEvents: show ? "auto" : "none", transform: show ? "translateX(0)" : "translateX(100%)",
           transition: "transform 0.32s cubic-bezier(0.22,1,0.36,1)",
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: "#ffffff" }}>Ask Pacer</span>
@@ -134,26 +137,46 @@ export default function AskPacerPanel({
             </div>
           )}
 
-          {pendingActions.length > 0 && (
-            <div className="pacer-rise" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 18, padding: 16 }}>
-              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
-                {pendingActions.map((a, i) => (
-                  <li key={i} style={{ fontSize: 14, color: "#ffffff", lineHeight: 1.4, display: "flex", gap: 8 }}>
-                    <span style={{ color: "#8e8e93" }}>•</span>
-                    <span>{a.summary}</span>
-                  </li>
-                ))}
-              </ul>
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
-                <button onClick={onCancelPendingActions} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.24)", color: "#ffffff", borderRadius: 9999, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}>
-                  Cancel
-                </button>
-                <button onClick={onConfirmPendingActions} style={{ background: "#0066cc", border: "none", color: "#ffffff", borderRadius: 9999, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}>
-                  {pendingActions.length > 1 ? "Confirm all" : "Confirm"}
-                </button>
+          {pendingActions.length > 0 && (() => {
+            const multi = pendingActions.length > 1;
+            const checkedCount = pendingChecked.filter(Boolean).length;
+            return (
+              <div className="pacer-rise" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 18, padding: 16 }}>
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+                  {pendingActions.map((a, i) => (
+                    <li key={i} style={{ fontSize: 14, color: "#ffffff", lineHeight: 1.4, display: "flex", alignItems: "flex-start", gap: 8 }}>
+                      {multi ? (
+                        <input
+                          type="checkbox"
+                          checked={pendingChecked[i] ?? true}
+                          onChange={() => onToggleActionChecked(i)}
+                          style={{ marginTop: 3, flexShrink: 0, cursor: "pointer" }}
+                        />
+                      ) : (
+                        <span style={{ color: "#8e8e93" }}>•</span>
+                      )}
+                      <span style={{ opacity: multi && !pendingChecked[i] ? 0.5 : 1 }}>{a.summary}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+                  <button onClick={onCancelPendingActions} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.24)", color: "#ffffff", borderRadius: 9999, padding: "8px 16px", fontSize: 13, cursor: "pointer" }}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={onConfirmPendingActions}
+                    disabled={checkedCount === 0}
+                    style={{
+                      background: "#0066cc", border: "none", color: "#ffffff", borderRadius: 9999, padding: "8px 16px", fontSize: 13,
+                      cursor: checkedCount === 0 ? "not-allowed" : "pointer", opacity: checkedCount === 0 ? 0.5 : 1,
+                    }}
+                  >
+                    {!multi ? "Confirm" : checkedCount === pendingActions.length ? "Confirm all" : `Confirm (${checkedCount})`}
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         <div style={{ padding: "14px 16px 18px", borderTop: "1px solid rgba(255,255,255,0.12)" }}>

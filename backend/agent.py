@@ -36,12 +36,29 @@ class AddEventArgs(BaseModel):
 
 class MoveEventArgs(BaseModel):
     eventId: int = Field(description="id of an existing event from the events list in the system prompt")
+    userNamedEvent: bool = Field(
+        default=False,
+        description="True only if the user explicitly named/identified this exact event themselves; "
+        "False if you picked it yourself via criteria (drain level, load contribution, etc).",
+    )
     newDay: Optional[int] = Field(default=None, ge=0, le=6)
     newStartHour: Optional[float] = Field(default=None)
 
 
 class DeleteEventArgs(BaseModel):
     eventId: int = Field(description="id of an existing event from the events list in the system prompt")
+    userNamedEvent: bool = Field(
+        default=False,
+        description="True only if the user explicitly named/identified this exact event themselves; "
+        "False if you picked it yourself via criteria (drain level, load contribution, etc).",
+    )
+
+
+def _is_ongoing(event, ctx):
+    now_hour = ctx.get("nowHour")
+    if now_hour is None or event["day"] != ctx.get("todayIndex"):
+        return False
+    return event["startHour"] <= now_hour < event["startHour"] + event["duration"]
 
 
 def _build_tools(ctx, actions):
@@ -57,8 +74,11 @@ def _build_tools(ctx, actions):
         return f"Queued: {result['summary']}"
 
     @tool("move_event", args_schema=MoveEventArgs)
-    def move_event(eventId: int, newDay: Optional[int] = None, newStartHour: Optional[float] = None) -> str:
+    def move_event(eventId: int, userNamedEvent: bool = False, newDay: Optional[int] = None, newStartHour: Optional[float] = None) -> str:
         """Propose moving/rescheduling an existing event by id. Leave a field null to keep it unchanged."""
+        target = next((e for e in ctx["events"] if e["id"] == eventId), None)
+        if target and not userNamedEvent and _is_ongoing(target, ctx):
+            return "Skipped — that event is in progress right now. Only touch it if the user specifically asked for that one."
         result = hydrate_action({"type": "move", "eventId": eventId, "newDay": newDay, "newStartHour": newStartHour}, ctx)
         if result["type"] == "unknown":
             return result["error"]
@@ -66,8 +86,11 @@ def _build_tools(ctx, actions):
         return f"Queued: {result['summary']}"
 
     @tool("delete_event", args_schema=DeleteEventArgs)
-    def delete_event(eventId: int) -> str:
+    def delete_event(eventId: int, userNamedEvent: bool = False) -> str:
         """Propose deleting/cancelling an existing event by id."""
+        target = next((e for e in ctx["events"] if e["id"] == eventId), None)
+        if target and not userNamedEvent and _is_ongoing(target, ctx):
+            return "Skipped — that event is in progress right now. Only touch it if the user specifically asked for that one."
         result = hydrate_action({"type": "delete", "eventId": eventId}, ctx)
         if result["type"] == "unknown":
             return result["error"]
@@ -94,11 +117,16 @@ def _build_system_prompt(ctx):
         for i in range(7)
     )
 
+    now_hour = ctx.get("nowHour")
+    now_line = f" It's currently {decimal_to_time_label(now_hour)} — don't propose a time earlier than that for today." if now_hour is not None else ""
+
     return (
         "You are Pacer, a conversational scheduling assistant living inside a weekly "
         "burnout-prevention calendar app. You help the user plan their week without "
         "overloading themselves.\n\n"
-        f"Today is {day_full[today_index]} (day index {today_index}).\n\n"
+        f"Today is {day_full[today_index]} (day index {today_index}).{now_line} If the user's "
+        "message doesn't name a specific day (e.g. \"I'm overwhelmed\"), assume they mean today "
+        "— never substitute a different day just because it looks more overloaded.\n\n"
         f"Existing events:\n{events_list}\n\n"
         f"Capacity per day (load vs. sleep-based budget):\n{capacity_list}\n\n"
         "Use the add_event / move_event / delete_event tools to PROPOSE changes — calling a "
@@ -113,7 +141,11 @@ def _build_system_prompt(ctx):
         "event is contributing most to that day's load. In these cases pick your best-guess "
         "eventId from the events+capacity info above, call the tool, and name which event you "
         "picked in your reply so the user can correct you — don't ask a clarifying question "
-        "first when a reasonable guess is possible.\n\n"
+        "first when a reasonable guess is possible. move_event/delete_event take a "
+        "userNamedEvent flag: set it true only when the user explicitly named or clearly "
+        "identified that exact event, false when you're picking it yourself via criteria — a "
+        "guessed target that's currently in progress right now gets skipped automatically, so "
+        "pick a different candidate in that case.\n\n"
         "Capacity-aware recovery suggestions: if a day relevant to the conversation (one the "
         "user mentioned, or one your own proposed adds/moves push over budget) shows above "
         "100% (\"Overloaded\"), consider proposing a short recovery block for that day via "

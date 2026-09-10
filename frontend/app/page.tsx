@@ -114,6 +114,8 @@ export default function PacerPage() {
         listening={p.listening}
         thinking={p.thinking}
         pendingActions={p.pendingActions}
+        pendingChecked={p.pendingChecked}
+        onToggleActionChecked={p.toggleActionChecked}
         onConfirmPendingActions={p.confirmPendingActions}
         onCancelPendingActions={p.cancelPendingActions}
         commandText={p.commandText}

@@ -9,7 +9,7 @@ export const DRAIN: Record<DrainKey, { weight: number; color: string; fill: stri
 
 export const DRAIN_ORDER: DrainKey[] = ["recovery", "low", "medium", "high"];
 
-const RECOVERY = ["sleep", "nap", "rest", "relax", "chill", "hangout", "movie", "game night", "party", "break"];
+const RECOVERY = ["sleep", "nap", "rest", "relax", "chill", "hangout", "movie", "game night", "party", "break", "recovery", "recharge"];
 const HIGH = ["exam", "midterm", "final", "test", "presentation", "interview", "deadline", "defense", "quiz"];
 const MEDIUM = [
   "class", "lecture", "meeting", "work", "shift", "study", "studying", "homework", "assignment",

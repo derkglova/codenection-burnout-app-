@@ -12,7 +12,7 @@ DRAIN = {
     "high": {"weight": 1.8, "color": "#ff3b30", "fill": "#d70015", "label": "High"},
 }
 
-_RECOVERY = ["sleep", "nap", "rest", "relax", "chill", "hangout", "movie", "game night", "party", "break"]
+_RECOVERY = ["sleep", "nap", "rest", "relax", "chill", "hangout", "movie", "game night", "party", "break", "recovery", "recharge"]
 _HIGH = ["exam", "midterm", "final", "test", "presentation", "interview", "deadline", "defense", "quiz"]
 _MEDIUM = ["class", "lecture", "meeting", "work", "shift", "study", "studying", "homework", "assignment",
            "lab", "seminar", "practice", "rehearsal", "project"]
