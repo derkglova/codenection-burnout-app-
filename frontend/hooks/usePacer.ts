@@ -311,7 +311,7 @@ export function usePacer() {
     setCommandText(value);
   }
   function onCommandKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submitNow();
     }
@@ -369,7 +369,7 @@ export function usePacer() {
         const { text, error } = await transcribeAudio(blob);
         setThinking(false);
         if (text && text.trim()) {
-          submitNow(text.trim());
+          setCommandText(text.trim());
         } else {
           pushMessage("pacer", error ? "Couldn't reach voice transcription — try typing instead." : "Didn't catch that — try typing instead.", true);
         }

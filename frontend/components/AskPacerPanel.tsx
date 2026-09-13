@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type { ChatMessage, PendingAction } from "@/lib/types";
 
 function bubbleStyle(m: ChatMessage): React.CSSProperties {
@@ -61,6 +62,14 @@ export default function AskPacerPanel({
   hasMessages: boolean;
   onNewChat: () => void;
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  }, [commandText]);
+
   const voicePillStyle: React.CSSProperties = {
     width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
     border: "1px solid " + (listening ? "rgba(255,59,48,0.4)" : "rgba(255,255,255,0.14)"),
@@ -180,14 +189,20 @@ export default function AskPacerPanel({
         </div>
 
         <div style={{ padding: "14px 16px 18px", borderTop: "1px solid rgba(255,255,255,0.12)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 9999, padding: "6px 6px 6px 18px" }}>
-            <input
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 22, padding: "6px 6px 6px 18px" }}>
+            <textarea
+              ref={textareaRef}
               className="pacer-cmd-input"
+              rows={1}
               value={commandText}
               onChange={(e) => onCommandChange(e.target.value)}
               onKeyDown={onCommandKeyDown}
               placeholder="Ask Pacer to add or move something…"
-              style={{ border: "none", outline: "none", background: "transparent", flex: 1, fontFamily: "var(--font-text)", fontSize: 14, color: "#ffffff", minWidth: 0 }}
+              style={{
+                border: "none", outline: "none", background: "transparent", flex: 1, resize: "none",
+                fontFamily: "var(--font-text)", fontSize: 14, color: "#ffffff", minWidth: 0,
+                lineHeight: 1.4, padding: "5px 0", maxHeight: 140, overflowY: "auto",
+              }}
             />
             <button onClick={onToggleVoice} title={listening ? "Listening…" : "Voice input"} style={voicePillStyle}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

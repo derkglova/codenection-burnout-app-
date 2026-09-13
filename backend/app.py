@@ -72,6 +72,7 @@ def transcribe():
                 result = groq_client.audio.transcriptions.create(
                     file=(os.path.basename(tmp.name), f.read()),
                     model=WHISPER_MODEL,
+                    language="en",
                 )
             except Exception as exc:
                 return jsonify({"error": str(exc)}), 502
