@@ -4,9 +4,7 @@
 
 **Problem Statement:** Stress & Workload Manager
 
-**Video Presentation:** [Unlisted Youtube Link]
-
-**Presentation Slides:** [Public Link]
+**Video Presentation:** [https://youtu.be/s81-9ROR548](https://youtu.be/s81-9ROR548)
 
 ## **1. Project Overview**
 
@@ -14,7 +12,7 @@
 
 Existing tools split into two camps, and neither closes the loop. **Voiset**, a voice-driven AI study planner, already tracks workload and lets students dictate tasks — but it's scoped to academic planning only (assignments, exams) and doesn't touch job shifts, social plans, or actively rearrange commitments once they're on the calendar. Wellness-scoring apps like **BurnoutGuard** and **Welltory** measure stress/energy but have no calendar integration at all, so the insight never turns into an action. Professional calendar tools like **Reclaim.ai** and **Motion** auto-reschedule around priorities but have no voice input and aren't built for a student's scattered life, only meetings.
 
-**Our Solution.** Pacer is a weekly calendar that a student builds and rearranges just by talking to it — no forms and separate app for work shifts versus assignments versus plans with friends. An AI buddy turns speech (or typed text) directly into calendar events and can rearrange existing ones on request, closing the loop between "I'm overloaded" and "here's what changed." A capacity bar forecasts tomorrow's load from what's already scheduled, and nudges the student — with a concrete reschedule suggestion — before the day gets overwhelming, not after.
+**Our Solution.** Pacer is a weekly calendar that a student builds and rearranges just by talking to it — no forms, no separate app for work shifts versus assignments versus plans with friends. An AI buddy turns speech (or typed text) directly into calendar events and can rearrange existing ones on request, closing the loop between "I'm overloaded" and "here's what changed." A capacity bar forecasts tomorrow's load from what's already scheduled, and nudges the student — with a concrete reschedule suggestion — before the day gets overwhelming, not after.
 
 **Core features:**
 
@@ -42,9 +40,8 @@ Existing tools split into two camps, and neither closes the loop. **Voiset**, a 
 
 ### **2.2 Ideation Boards**
 
-Architecture flow and three-battery mindmap diagrams: [https://claude.ai/code/artifact/aee18a1d-ad50-410c-8892-01da0bae0314](https://claude.ai/code/artifact/aee18a1d-ad50-410c-8892-01da0bae0314)
-
-The first diagram shows how a voice/text input travels through the backend to three engines (ingestion, reasoning, capacity math) and back to the dashboard. The second maps the original three-battery concept (mental/physical/social) and what drains vs. replenishes each — since demoted to a nice-to-have, but kept as the reasoning behind the single capacity bar.
+![Pacer system architecture — voice/text input through the LangChain agent to the calendar and capacity calculation](screenshots/diagram.png)
+*How a voice or text message travels from the frontend through the backend's LangChain tool-calling agent (with a regex fallback on failure) to a proposed set of calendar changes, which the user confirms before they update the calendar and feed the capacity calculation.*
 
 ### **2.3 Mentor Consultation**
 
@@ -54,9 +51,14 @@ The first diagram shows how a voice/text input travels through the backend to th
 
 ## **3. Design & Prototype**
 
-**UI Prototype:** [Public Link]
+![Dashboard: calendar, capacity bar, nudge banner, and sleep slider](screenshots/dashboard.png)
+*The full weekly view — drain-colored blocks, tomorrow's capacity forecast, the overload nudge with a one-click reschedule suggestion, and the sleep slider that feeds the forecast, all in one screen.*
 
-*[Add a link to the Figma/Canva/hosted design board, or embed 4–8 key screens as images with a caption on each explaining the interaction. The original design source for this build lives in `project/Pacer.dc.html` if a starting point is useful.]*
+![Ask Pacer proposing multiple events from one message](screenshots/multi-add.png)
+*A single natural-language message ("exam Friday, shift Saturday, hang out Sunday") turned into three proposed events at once, each individually checkable before confirming.*
+
+![Ask Pacer reasoning about an overloaded day and suggesting a recovery break](screenshots/reasoning-reply.png)
+*A vague "I am overwhelmed today" is enough — the AI buddy picks what to move on its own, explains why, and proactively adds a recovery break.*
 
 ## **4. What Makes It Different**
 

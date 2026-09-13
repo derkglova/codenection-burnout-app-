@@ -11,6 +11,7 @@ export default function TodayPill({ vm }: { vm: TodayPillVM }) {
       <span style={{ fontSize: 13, color: "#7a7a7a", flexShrink: 0 }}>Today</span>
       <div
         title={vm.breakdownLabel}
+        suppressHydrationWarning
         style={{ flex: 1, minWidth: 40, height: 8, background: "#e5e5ea", borderRadius: 9999, overflow: "hidden", position: "relative", display: "flex", alignItems: "stretch" }}
       >
         <div style={{ height: "100%", width: `${vm.usedPct}%`, background: vm.statusColor, flexShrink: 0, position: "relative", zIndex: 2 }} />
